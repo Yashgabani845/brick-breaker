@@ -1,0 +1,161 @@
+import 'package:flutter/material.dart';
+import '../../core/constants/game_colors.dart';
+import '../../core/constants/game_constants.dart';
+import '../../game/systems/audio_synthesizer.dart';
+import '../../storage/game_storage.dart';
+import '../components/glass_button.dart';
+
+/// Settings Modal with Ultra-Hard Difficulty Selector
+class SettingsModal extends StatefulWidget {
+  final DifficultyMode currentDifficulty;
+  final ValueChanged<DifficultyMode> onDifficultyChanged;
+
+  const SettingsModal({
+    super.key,
+    required this.currentDifficulty,
+    required this.onDifficultyChanged,
+  });
+
+  @override
+  State<SettingsModal> createState() => _SettingsModalState();
+}
+
+class _SettingsModalState extends State<SettingsModal> {
+  late bool _isMuted;
+  late DifficultyMode _selectedDifficulty;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMuted = AudioSynthesizer.instance.isMuted;
+    _selectedDifficulty = widget.currentDifficulty;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Sound Switch
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.volume_up_rounded, color: GameColors.neonCyan),
+                SizedBox(width: 10),
+                Text('Sound & Chimes', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            Switch(
+              value: !_isMuted,
+              activeColor: GameColors.neonCyan,
+              onChanged: (val) {
+                setState(() => _isMuted = !val);
+                AudioSynthesizer.instance.isMuted = !val;
+                GameStorage.instance.setIsMuted(!val);
+              },
+            ),
+          ],
+        ),
+        const Divider(color: Colors.white12, height: 24),
+
+        // Difficulty Tuning
+        const Row(
+          children: [
+            Icon(Icons.tune_rounded, color: GameColors.electricAmber),
+            SizedBox(width: 10),
+            Text('Gameplay Difficulty', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        ...DifficultyMode.values.map((mode) {
+          final isSelected = _selectedDifficulty == mode;
+          final isBrutal = mode == DifficultyMode.brutalImpossible;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedDifficulty = mode);
+              widget.onDifficultyChanged(mode);
+              GameStorage.instance.setDifficultyMode(mode);
+              AudioSynthesizer.instance.playUiClick();
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (isBrutal ? GameColors.crimsonDanger.withOpacity(0.35) : GameColors.neonCyan.withOpacity(0.25))
+                    : Colors.white.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? (isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan)
+                      : Colors.white12,
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                    color: isSelected
+                        ? (isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan)
+                        : Colors.white38,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mode.displayName,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          isBrutal
+                              ? '5.0x HP, 1-hit danger proximity, razor-thin gaps'
+                              : '${mode.hpMultiplier}x HP • ${mode.maxAimBounces} Bounce Aim Guide',
+                          style: TextStyle(
+                            color: isBrutal ? GameColors.crimsonDanger : Colors.white38,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${mode.turnScoreMultiplier}x SCORE',
+                        style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+
+        const SizedBox(height: 20),
+        GlassButton(
+          onPressed: () => Navigator.of(context).pop(),
+          isPrimary: true,
+          child: const Text('SAVE & CLOSE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+        ),
+      ],
+    );
+  }
+}

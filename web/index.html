@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Bricks Breaker 3D - Modern 3D Physics Brick Breaker with mega-density ball swarms, lasers, bombs, and glassmorphic aesthetics.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#030712">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bricks Breaker 3D">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Bricks Breaker 3D — Mega Ball Swarm & Physics</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #030712;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // Procedural High-Fidelity Web Audio Synthesizer for Bricks Breaker 3D
+    (function() {
+      var audioCtx = null;
+      function getAudioContext() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      window.AntigravityAudioEngine = {
+        playTone: function(freq, durationSec, type, volume, decay) {
+          try {
+            var ctx = getAudioContext();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = type || 'sine';
+            osc.frequency.setValueAtTime(freq || 440, ctx.currentTime);
+            
+            var vol = (volume !== undefined ? volume : 0.4) * 0.5;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (durationSec || 0.1));
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + (durationSec || 0.1));
+          } catch(e) {}
+        },
+
+        playSweep: function(startFreq, endFreq, durationSec, type, volume) {
+          try {
+            var ctx = getAudioContext();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = type || 'sawtooth';
+            osc.frequency.setValueAtTime(startFreq || 800, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq || 100), ctx.currentTime + (durationSec || 0.2));
+            
+            var vol = (volume !== undefined ? volume : 0.3) * 0.5;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (durationSec || 0.2));
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + (durationSec || 0.2));
+          } catch(e) {}
+        },
+
+        playNoiseExplosion: function(durationSec, cutoffFreq, volume) {
+          try {
+            var ctx = getAudioContext();
+            var dur = durationSec || 0.4;
+            var bufferSize = Math.floor(ctx.sampleRate * dur);
+            var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            var data = buffer.getChannelData(0);
+            for (var i = 0; i < bufferSize; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+            }
+            var noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            
+            var filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(cutoffFreq || 350, ctx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + dur);
+            
+            var gain = ctx.createGain();
+            var vol = (volume !== undefined ? volume : 0.5) * 0.6;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            noise.start();
+          } catch(e) {}
+        },
+
+        playChime: function(combo, volume) {
+          var pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+          var idx = Math.min(Math.floor((combo || 0) / 2), pentatonic.length - 1);
+          var freq = pentatonic[idx];
+          this.playTone(freq, 0.12, 'sine', volume || 0.35);
+        },
+
+        playClick: function() {
+          this.playTone(850, 0.04, 'square', 0.15);
+        },
+
+        playLaser: function() {
+          this.playSweep(1200, 150, 0.15, 'sawtooth', 0.25);
+        },
+
+        playNuke: function() {
+          this.playNoiseExplosion(0.65, 500, 0.7);
+          this.playSweep(250, 30, 0.5, 'sine', 0.6);
+        },
+
+        playRewardDing: function() {
+          var self = this;
+          self.playTone(880, 0.1, 'triangle', 0.3);
+          setTimeout(function() { self.playTone(1318.51, 0.2, 'triangle', 0.35); }, 80);
+        },
+
+        playVictoryFanfare: function() {
+          var self = this;
+          var notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach(function(freq, i) {
+            setTimeout(function() {
+              self.playTone(freq, 0.25, 'triangle', 0.4);
+            }, i * 110);
+          });
+        }
+      };
+
+      // Ensure user gesture unlocks audio on web
+      window.addEventListener('click', function() {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }, { once: true });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -37,12 +37,11 @@ class GameConstants {
   static const int continueCostGems = 15;
 }
 
-/// Difficulty modes with ultra-tough/impossible mode tuning
+/// Difficulty modes: balanced for enjoyable and tactical gameplay
 enum DifficultyMode {
   relaxed,
   standard,
   hardcore,
-  brutalImpossible,
 }
 
 extension DifficultyModeExtension on DifficultyMode {
@@ -54,21 +53,17 @@ extension DifficultyModeExtension on DifficultyMode {
         return 'Standard Arcade';
       case DifficultyMode.hardcore:
         return 'Hardcore Master';
-      case DifficultyMode.brutalImpossible:
-        return 'BRUTAL IMPOSSIBLE';
     }
   }
 
   double get hpMultiplier {
     switch (this) {
       case DifficultyMode.relaxed:
-        return 0.65;
+        return 0.75;
       case DifficultyMode.standard:
         return 1.0;
       case DifficultyMode.hardcore:
         return 1.35;
-      case DifficultyMode.brutalImpossible:
-        return 1.75; // Fair, tough, but logically beatable
     }
   }
 
@@ -80,8 +75,6 @@ extension DifficultyModeExtension on DifficultyMode {
         return 3;
       case DifficultyMode.hardcore:
         return 2;
-      case DifficultyMode.brutalImpossible:
-        return 2; // Clear 2-bounce trajectory guide for tactical precision
     }
   }
 
@@ -93,8 +86,6 @@ extension DifficultyModeExtension on DifficultyMode {
         return 1.5;
       case DifficultyMode.hardcore:
         return 2.5;
-      case DifficultyMode.brutalImpossible:
-        return 5.0;
     }
   }
 }

@@ -181,7 +181,6 @@ class _SettingsModalState extends State<SettingsModal> {
 
         ...DifficultyMode.values.map((mode) {
           final isSelected = _selectedDifficulty == mode;
-          final isBrutal = mode == DifficultyMode.brutalImpossible;
 
           return GestureDetector(
             onTap: () {
@@ -195,13 +194,11 @@ class _SettingsModalState extends State<SettingsModal> {
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? (isBrutal ? GameColors.crimsonDanger.withOpacity(0.35) : GameColors.neonCyan.withOpacity(0.25))
+                    ? GameColors.neonCyan.withOpacity(0.2)
                     : Colors.white.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? (isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan)
-                      : Colors.white12,
+                  color: isSelected ? GameColors.neonCyan : Colors.white12,
                   width: isSelected ? 1.5 : 1.0,
                 ),
               ),
@@ -209,9 +206,7 @@ class _SettingsModalState extends State<SettingsModal> {
                 children: [
                   Icon(
                     isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    color: isSelected
-                        ? (isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan)
-                        : Colors.white38,
+                    color: isSelected ? GameColors.neonCyan : Colors.white38,
                     size: 18,
                   ),
                   const SizedBox(width: 10),
@@ -228,11 +223,9 @@ class _SettingsModalState extends State<SettingsModal> {
                           ),
                         ),
                         Text(
-                          isBrutal
-                              ? '5.0x HP, 1-hit danger proximity, razor-thin gaps'
-                              : '${mode.hpMultiplier}x HP • ${mode.maxAimBounces} Bounce Aim Guide',
-                          style: TextStyle(
-                            color: isBrutal ? GameColors.crimsonDanger : Colors.white38,
+                          '${mode.hpMultiplier}x HP • ${mode.maxAimBounces} Bounce Aim Guide',
+                          style: const TextStyle(
+                            color: Colors.white38,
                             fontSize: 11,
                           ),
                         ),
@@ -243,7 +236,7 @@ class _SettingsModalState extends State<SettingsModal> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isBrutal ? GameColors.crimsonDanger : GameColors.neonCyan,
+                        color: GameColors.neonCyan,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

@@ -342,11 +342,9 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12.0),
                     child: GlassCard(
-                      glow: isCurrent || isImpossible,
-                      glowColor: isImpossible ? GameColors.crimsonDanger : (isCurrent ? themeColor : null),
-                      surfaceColor: isImpossible ? const Color(0x33FF1744) : null,
+                      borderColor: isCurrent ? themeColor.withOpacity(0.5) : GameColors.glassBorder,
                       padding: const EdgeInsets.all(14.0),
-                      borderRadius: 18.0,
+                      borderRadius: 16.0,
                       child: Row(
                         children: [
                           // Holographic Blueprint Radar Preview
@@ -444,9 +442,7 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                               },
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               borderRadius: 12,
-                              gradient: isImpossible
-                                  ? const [GameColors.crimsonDanger, Color(0xFF88001B)]
-                                  : [themeColor, themeColor.withOpacity(0.6)],
+                              gradient: [themeColor, themeColor.withOpacity(0.7)],
                               child: const Text(
                                 'PLAY',
                                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.0),

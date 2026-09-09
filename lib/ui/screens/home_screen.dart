@@ -92,21 +92,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ).then((_) => _loadSaveData());
   }
 
-  void _startEndlessMode() {
-    AudioSynthesizer.instance.playUiClick();
-    final endlessLevel = ProceduralLevelGenerator.generate(levelNumber: 99);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => GameplayScreen(
-          levelData: endlessLevel.copyWith(title: 'ENDLESS MATRIX SURVIVAL'),
-          difficulty: _difficulty,
-          initialBalls: _permanentBalls,
-          ballSkin: _currentSkin,
-        ),
-      ),
-    ).then((_) => _loadSaveData());
-  }
-
   void _toggleDarkTheme() {
     AudioSynthesizer.instance.playUiClick();
     final nextIndex = (_themeIndex == 0) ? 1 : 0;
@@ -462,19 +447,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildMainPlayCta() {
-    final isMax = _unlockedLevel > 20;
-    final lvlTitle = isMax ? 'PLAY ENDLESS' : 'PLAY LEVEL $_unlockedLevel';
+    final lvlTitle = 'PLAY LEVEL $_unlockedLevel';
 
     return SizedBox(
       width: double.infinity,
       child: GlassButton(
-        onPressed: () {
-          if (isMax) {
-            _startEndlessMode();
-          } else {
-            _startLevel(_unlockedLevel);
-          }
-        },
+        onPressed: () => _startLevel(_unlockedLevel),
         gradient: const [Color(0xFF00C6FF), Color(0xFF0072FF)],
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         borderRadius: 16.0,
@@ -499,100 +477,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildGameModesGrid() {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            // Sector Campaign Map Card
-            Expanded(
-              child: GlassCard(
-                onTap: _openLevelMap,
-                padding: const EdgeInsets.all(12),
-                borderRadius: 14,
-                borderColor: GameColors.neonCyan.withOpacity(0.35),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 22),
-                    const SizedBox(height: 8),
-                    const Text('SECTOR MAP', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 2),
-                    Text('1,000 Levels', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 10.5)),
-                  ],
-                ),
-              ),
+        // Sector Campaign Map Card
+        Expanded(
+          child: GlassCard(
+            onTap: _openLevelMap,
+            padding: const EdgeInsets.all(14),
+            borderRadius: 16,
+            borderColor: GameColors.neonCyan.withOpacity(0.35),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 24),
+                const SizedBox(height: 10),
+                const Text('SECTOR MAP', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                Text('1,000 Levels', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11)),
+              ],
             ),
-            const SizedBox(width: 10),
-
-            // Daily Challenge Card
-            Expanded(
-              child: GlassCard(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DailyChallengeScreen()),
-                  ).then((_) => _loadSaveData());
-                },
-                padding: const EdgeInsets.all(12),
-                borderRadius: 14,
-                borderColor: GameColors.electricAmber.withOpacity(0.35),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 22),
-                    const SizedBox(height: 8),
-                    const Text('DAILY QUEST', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 2),
-                    const Text('Rewards 🔥', style: TextStyle(color: GameColors.electricAmber, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            // Brutal Hardcore Mode Card
-            Expanded(
-              child: GlassCard(
-                onTap: () => _startLevel(10, diff: DifficultyMode.brutalImpossible),
-                padding: const EdgeInsets.all(12),
-                borderRadius: 14,
-                borderColor: GameColors.crimsonDanger.withOpacity(0.35),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.local_fire_department_rounded, color: GameColors.crimsonDanger, size: 22),
-                    const SizedBox(height: 8),
-                    const Text('BRUTAL TRIAL', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 2),
-                    const Text('Boss Trial', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
+        const SizedBox(width: 12),
 
-            // Endless Mode Card
-            Expanded(
-              child: GlassCard(
-                onTap: _startEndlessMode,
-                padding: const EdgeInsets.all(12),
-                borderRadius: 14,
-                borderColor: GameColors.neonPurple.withOpacity(0.35),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.all_inclusive_rounded, color: GameColors.neonPurple, size: 22),
-                    const SizedBox(height: 8),
-                    const Text('ENDLESS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 2),
-                    Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 10.5)),
-                  ],
-                ),
-              ),
+        // Daily Challenge Card
+        Expanded(
+          child: GlassCard(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DailyChallengeScreen()),
+              ).then((_) => _loadSaveData());
+            },
+            padding: const EdgeInsets.all(14),
+            borderRadius: 16,
+            borderColor: GameColors.electricAmber.withOpacity(0.35),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 24),
+                const SizedBox(height: 10),
+                const Text('DAILY QUEST', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                const Text('Rewards 🔥', style: TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );

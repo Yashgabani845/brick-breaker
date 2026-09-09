@@ -1,6 +1,6 @@
 {
-    "name": "bricks_breaker_3d",
-    "short_name": "bricks_breaker_3d",
+    "name": "Brick Smash",
+    "short_name": "Brick Smash",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

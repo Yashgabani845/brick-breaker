@@ -20,7 +20,7 @@ class GameConstants {
   static const int maxTrajectoryReflections = 4;
 
   // Collision Substepping
-  static const int physicsSubSteps = 2; // 2 sub-steps per frame — good anti-tunneling with less CPU
+  static const int physicsSubSteps = 3; // 3 sub-steps: good anti-tunneling, reasonable CPU
   static const double minSeparationOffset = 0.5;
 
   // Special Blocks

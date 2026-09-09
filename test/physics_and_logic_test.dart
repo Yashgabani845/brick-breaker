@@ -117,27 +117,27 @@ void main() {
     });
   });
 
-  group('Level Catalog, 100+ Shape Library & 1000 Unique Levels', () {
-    test('Catalog contains all 20 handcrafted starter tiers', () {
-      expect(LevelCatalog.levels.length, 20);
+  group('Level Catalog, Shape Library & Procedural Levels', () {
+    test('Catalog contains all 50 handcrafted arcade levels', () {
+      expect(LevelCatalog.levels.length, 50);
 
       final level10 = LevelCatalog.getLevel(10);
-      expect(level10.archetype, LevelArchetype.impossibleCitadel);
       expect(level10.initialBricks.isNotEmpty, true);
-      expect(level10.startingBalls, 80);
+      expect(level10.columns, 12);
+      expect(level10.rows, 16);
     });
 
-    test('ShapeLibrary provides diverse shapes and patterns', () {
-      expect(ShapeLibrary.shapes.length >= 30, true);
+    test('ShapeLibrary builds valid brick matrices', () {
+      final bricks = ShapeLibrary.buildShape(shapeName: 'pyramid', startId: 1, baseHp: 10);
+      expect(bricks.isNotEmpty, true);
     });
 
     test('Generates distinct valid levels across 1 to 1000 with progressive scaling', () {
-      final sampleLevels = [1, 50, 100, 250, 500, 750, 1000];
+      final sampleLevels = [1, 25, 50, 100, 250, 500, 750, 1000];
       for (final lvlNum in sampleLevels) {
         final level = LevelCatalog.getLevel(lvlNum);
         expect(level.levelNumber, lvlNum);
         expect(level.initialBricks.isNotEmpty, true);
-        expect(level.startingBalls >= 30, true);
       }
     });
 

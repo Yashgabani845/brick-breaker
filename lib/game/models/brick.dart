@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
+import 'powerup.dart';
 
-/// Taxonomy of all game brick entities in Bricks Breaker 3D
+/// Taxonomy of all game brick entities in Brick Smash
 enum BrickType {
   standard,
   wedgeTopLeft,
   wedgeTopRight,
   wedgeBottomLeft,
   wedgeBottomRight,
-  permanentAdder, // +1 permanent ammunition for future turns
-  turnBallAdder,  // +1 BALL FOR THIS ENTIRE TURN ("Swarm Expand" mechanic)
-  inAirSplitter,  // x2 in-flight swarm duplication (clone lasts only for current ball)
+  permanentAdder,
+  turnBallAdder,
+  inAirSplitter,
   horizontalLaser,
   verticalLaser,
   crossLaser,
   diagonalLaser,
-  clusterBomb,    // 3x3 blast
-  chainDynamite,  // Propagates to neighboring explosives
-  superNuke,      // Clears all <= 30 HP blocks
-  iceBlock,       // Slows danger descent
-  armoredBrick,   // Takes 50% damage / extra hits
-  titaniumShield, // Unbreakable obstacle
+  clusterBomb,
+  chainDynamite,
+  superNuke,
+  iceBlock,
+  armoredBrick,
+  titaniumShield,
 }
 
 extension BrickTypeExtension on BrickType {
@@ -63,8 +64,9 @@ class Brick {
   int hp;
   final int maxHp;
   bool isDestroyed;
-  double hitFlashTimer; // In seconds, for hit flash shader effect
-  double rotation; // In radians for dynamic animations
+  double hitFlashTimer;
+  double rotation;
+  final PowerUpType? dropPowerUp;
 
   Brick({
     required this.id,
@@ -76,6 +78,7 @@ class Brick {
     this.isDestroyed = false,
     this.hitFlashTimer = 0.0,
     this.rotation = 0.0,
+    this.dropPowerUp,
   }) : maxHp = maxHp ?? hp;
 
   Brick copyWith({
@@ -88,6 +91,7 @@ class Brick {
     bool? isDestroyed,
     double? hitFlashTimer,
     double? rotation,
+    PowerUpType? dropPowerUp,
   }) {
     return Brick(
       id: id ?? this.id,
@@ -99,6 +103,7 @@ class Brick {
       isDestroyed: isDestroyed ?? this.isDestroyed,
       hitFlashTimer: hitFlashTimer ?? this.hitFlashTimer,
       rotation: rotation ?? this.rotation,
+      dropPowerUp: dropPowerUp ?? this.dropPowerUp,
     );
   }
 

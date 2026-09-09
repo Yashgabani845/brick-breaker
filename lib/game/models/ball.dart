@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
+import '../../core/constants/game_constants.dart';
 import '../../core/math/vector2.dart';
 
-/// Available Ball Cosmetic Skins
+/// Cosmetic skins for Ball entities
 enum BallSkin {
   neonWhite,
   cyanPlasma,
@@ -16,34 +18,68 @@ extension BallSkinExtension on BallSkin {
   String get displayName {
     switch (this) {
       case BallSkin.neonWhite:
-        return 'Pure Neon';
+        return 'Pearl White';
       case BallSkin.cyanPlasma:
         return 'Cyan Plasma';
       case BallSkin.solarFlare:
-        return 'Solar Flare';
+        return 'Solar Fire';
       case BallSkin.emeraldCore:
-        return 'Cyber Emerald';
+        return 'Emerald Core';
       case BallSkin.voidCrystal:
         return 'Void Crystal';
       case BallSkin.goldenCrown:
-        return 'Golden Crown';
+        return 'Golden Sun';
     }
   }
 
   Color get glowColor {
     switch (this) {
       case BallSkin.neonWhite:
+        return const Color(0xFFFFD54F);
+      case BallSkin.cyanPlasma:
+        return const Color(0xFF00E5FF);
+      case BallSkin.solarFlare:
+        return const Color(0xFFFF5722);
+      case BallSkin.emeraldCore:
+        return const Color(0xFF00E676);
+      case BallSkin.voidCrystal:
+        return const Color(0xFFE040FB);
+      case BallSkin.goldenCrown:
+        return const Color(0xFFFFB300);
+    }
+  }
+
+  Color get coreColor {
+    switch (this) {
+      case BallSkin.neonWhite:
         return Colors.white;
       case BallSkin.cyanPlasma:
-        return GameColors.neonCyan;
+        return const Color(0xFFE0F7FA);
       case BallSkin.solarFlare:
-        return GameColors.electricAmber;
+        return const Color(0xFFFFF9C4);
       case BallSkin.emeraldCore:
-        return GameColors.emeraldGreen;
+        return const Color(0xFFE8F5E9);
       case BallSkin.voidCrystal:
-        return GameColors.neonPurple;
+        return const Color(0xFFF3E5F5);
       case BallSkin.goldenCrown:
-        return GameColors.solarGold;
+        return const Color(0xFFFFF8E1);
+    }
+  }
+
+  List<Color> get gradientColors {
+    switch (this) {
+      case BallSkin.neonWhite:
+        return const [Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFFF8F00), Color(0xFFE65100)];
+      case BallSkin.cyanPlasma:
+        return const [Color(0xFFE0F7FA), Color(0xFF00E5FF), Color(0xFF0091EA), Color(0xFF0D47A1)];
+      case BallSkin.solarFlare:
+        return const [Color(0xFFFFF9C4), Color(0xFFFF9100), Color(0xFFFF3D00), Color(0xFFB71C1C)];
+      case BallSkin.emeraldCore:
+        return const [Color(0xFFE8F5E9), Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF1B5E20)];
+      case BallSkin.voidCrystal:
+        return const [Color(0xFFF3E5F5), Color(0xFFEA80FC), Color(0xFFAB47BC), Color(0xFF4A148C)];
+      case BallSkin.goldenCrown:
+        return const [Color(0xFFFFFDE7), Color(0xFFFFEE58), Color(0xFFFFD700), Color(0xFFFF6F00)];
     }
   }
 
@@ -52,60 +88,79 @@ extension BallSkinExtension on BallSkin {
       case BallSkin.neonWhite:
         return 0;
       case BallSkin.cyanPlasma:
-        return 200;
+        return 100;
       case BallSkin.solarFlare:
-        return 500;
+        return 250;
       case BallSkin.emeraldCore:
-        return 800;
+        return 500;
       case BallSkin.voidCrystal:
-        return 1200;
+        return 800;
       case BallSkin.goldenCrown:
-        return 2000;
+        return 1200;
     }
   }
 }
 
-/// Dynamic Ball Entity simulated in real-time
+/// Ball Entity for Real-Time Paddle Brick Breaker
 class Ball {
   final int id;
-  final Vector2 position;
-  final Vector2 velocity;
-  final double radius;
+  Vector2 position;
+  Vector2 velocity;
+  double radius;
+  double speed;
   bool isActive;
-  bool isReturning; // Returning to launcher magnet
-  int damageMultiplier;
-  final BallSkin skin;
-  int generation; // Generation 0 = original launched, 1+ = split clones
-  int? lastHitBrickId;
-  double hitCooldown; // Collision cooldown to prevent multi-hit sticking
-
-  // Circular Trail buffer for zero-garbage motion trails
-  static const int maxTrailLength = 5;
-  final List<Vector2> trail = [];
+  bool isStuckToPaddle; // Initial ball waiting for player launch
+  bool isFireball;
+  double fireballTimer;
+  BallSkin skin;
+  final List<Vector2> trail;
+  int hitStreak;
 
   Ball({
     required this.id,
-    required Vector2 position,
-    required Vector2 velocity,
-    this.radius = 5.0,
+    required this.position,
+    Vector2? velocity,
+    this.radius = 7.0,
+    this.speed = 360.0, // Standard responsive arcade speed (px/s)
     this.isActive = true,
-    this.isReturning = false,
-    this.damageMultiplier = 1,
+    this.isStuckToPaddle = false,
+    this.isFireball = false,
+    this.fireballTimer = 0.0,
     this.skin = BallSkin.neonWhite,
-    this.generation = 0,
-    this.lastHitBrickId,
-    this.hitCooldown = 0.0,
-  })  : position = Vector2.copy(position),
-        velocity = Vector2.copy(velocity);
+    List<Vector2>? trail,
+    this.hitStreak = 0,
+  })  : velocity = velocity ?? Vector2(0, -360.0),
+        trail = trail ?? [];
 
-  void updateTrail() {
-    if (trail.length >= maxTrailLength) {
-      trail.removeAt(0);
-    }
-    trail.add(Vector2.copy(position));
+  void setVelocity(double vx, double vy) {
+    velocity.set(vx, vy);
+    speed = velocity.length;
   }
 
-  void clearTrail() {
-    trail.clear();
+  void activateFireball(double duration) {
+    isFireball = true;
+    fireballTimer = duration;
+  }
+
+  void update(double dt) {
+    if (!isActive || isStuckToPaddle) return;
+
+    // Fireball timer
+    if (isFireball) {
+      fireballTimer -= dt;
+      if (fireballTimer <= 0) {
+        isFireball = false;
+      }
+    }
+
+    // Record trail position for ultra-smooth visual trailing
+    trail.add(Vector2(position.x, position.y));
+    if (trail.length > 8) {
+      trail.removeAt(0);
+    }
+
+    // Step position
+    position.x += velocity.x * dt;
+    position.y += velocity.y * dt;
   }
 }

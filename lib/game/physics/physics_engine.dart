@@ -1,291 +1,399 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
-import '../../core/constants/game_constants.dart';
 import '../../core/math/vector2.dart';
 import '../models/ball.dart';
 import '../models/brick.dart';
+import '../models/paddle.dart';
 import '../models/particle.dart';
+import '../models/powerup.dart';
 import '../systems/audio_synthesizer.dart';
-import 'chain_reaction_manager.dart';
-import 'collision_system.dart';
-import 'spatial_hash.dart';
 
-/// Event payload when a ball hits a brick
-class BrickHitEvent {
-  final Brick brick;
-  final Ball ball;
-  final bool wasDestroyed;
-
-  BrickHitEvent({
-    required this.brick,
-    required this.ball,
-    required this.wasDestroyed,
-  });
-}
-
-/// High-Performance Deterministic Physics Engine
+/// Real-Time Arcade Physics Engine for Paddle-Controlled Brick Smash
 class PhysicsEngine {
-  final SpatialHashGrid spatialHash;
-  final ChainReactionManager chainManager = ChainReactionManager();
-
-  // Temporary spawn queue to avoid mutating the ball list during iteration
-  final List<Ball> _spawnQueue = [];
+  final int columns;
+  final int rows;
+  final double cellWidth;
+  final double cellHeight;
 
   PhysicsEngine({
-    required int columns,
-    required int rows,
-    required double cellWidth,
-    required double cellHeight,
-  }) : spatialHash = SpatialHashGrid(
-          columns: columns,
-          rows: rows,
-          cellWidth: cellWidth,
-          cellHeight: cellHeight,
-        );
+    required this.columns,
+    required this.rows,
+    required this.cellWidth,
+    required this.cellHeight,
+  });
 
-  /// Performs a full simulation step with sub-stepping for anti-tunneling
   void update({
     required double dt,
     required List<Ball> balls,
+    required Paddle paddle,
     required List<Brick> bricks,
+    required List<PowerUp> fallingPowerUps,
     required double playfieldWidth,
     required double playfieldHeight,
-    required double cellWidth,
-    required double cellHeight,
-    required void Function(BrickHitEvent) onBrickHit,
-    required void Function(int permanentBallsAdded) onPermanentBallCollected,
-    required void Function() onTurnBallSpawned,
-    required void Function(Ball landedBall) onBallLanded,
-    required double speedMultiplier,
+    required void Function(Brick, Ball) onBrickHit,
+    required void Function(PowerUp) onPowerUpCollected,
+    required void Function(Ball) onBallLost,
   }) {
-    final effectiveDt = dt * speedMultiplier;
-    final subStepDt = effectiveDt / GameConstants.physicsSubSteps;
+    // 1. Update Paddle
+    paddle.update(dt, 0, playfieldWidth);
 
-    _spawnQueue.clear();
+    // 2. Substep Ball Physics (2 sub-steps for crisp anti-tunneling precision)
+    const int subSteps = 2;
+    final subDt = dt / subSteps;
 
-    // Rebuild spatial grid for active bricks
-    spatialHash.populate(bricks);
-
-    for (int step = 0; step < GameConstants.physicsSubSteps; step++) {
+    for (int step = 0; step < subSteps; step++) {
       for (int i = 0; i < balls.length; i++) {
         final ball = balls[i];
         if (!ball.isActive) continue;
 
-        // Decrement hit cooldown timer
-        if (ball.hitCooldown > 0) {
-          ball.hitCooldown -= subStepDt;
-        }
-
-        // Sub-step movement
-        ball.position.x += ball.velocity.x * subStepDt;
-        ball.position.y += ball.velocity.y * subStepDt;
-
-        // 1. Boundary / Wall collisions
-        // Left wall
-        if (ball.position.x - ball.radius < 0) {
-          ball.position.x = ball.radius;
-          ball.velocity.x = ball.velocity.x.abs();
-        }
-        // Right wall
-        if (ball.position.x + ball.radius > playfieldWidth) {
-          ball.position.x = playfieldWidth - ball.radius;
-          ball.velocity.x = -ball.velocity.x.abs();
-        }
-        // Top wall
-        if (ball.position.y - ball.radius < 0) {
-          ball.position.y = ball.radius;
-          ball.velocity.y = ball.velocity.y.abs();
-        }
-        // Bottom floor (Ball returned)
-        if (ball.position.y + ball.radius >= playfieldHeight) {
-          ball.position.y = playfieldHeight - ball.radius;
-          ball.isActive = false;
-          onBallLanded(ball);
+        if (ball.isStuckToPaddle) {
+          // Ball follows paddle top center before initial launch
+          ball.position.set(paddle.position.x, paddle.position.y - paddle.height / 2 - ball.radius - 2);
           continue;
         }
 
-        // 2. Brick collisions via Spatial Hash broad-phase
-        final candidates = spatialHash.queryCandidates(
-          ball.position.x,
-          ball.position.y,
-          ball.radius + math.max(cellWidth, cellHeight),
-        );
+        ball.update(subDt);
 
-        for (int c = 0; c < candidates.length; c++) {
-          final brick = candidates[c];
-          if (brick.isDestroyed) continue;
+        // Wall Collisions
+        _handleWallCollisions(ball, playfieldWidth, playfieldHeight, onBallLost);
 
-          final bx = brick.gridX * cellWidth;
-          final by = brick.gridY * cellHeight;
+        // Paddle Collision
+        _handlePaddleCollision(ball, paddle);
 
-          CollisionResult result;
-          if (brick.type.isWedge) {
-            result = CollisionSystem.testCircleVsWedge(
-              ballPos: ball.position,
-              ballRadius: ball.radius,
-              left: bx,
-              top: by,
-              right: bx + cellWidth,
-              bottom: by + cellHeight,
-              brick: brick,
-            );
-          } else {
-            result = CollisionSystem.testCircleVsAABB(
-              ballPos: ball.position,
-              ballRadius: ball.radius,
-              left: bx,
-              top: by,
-              right: bx + cellWidth,
-              bottom: by + cellHeight,
-              brick: brick,
-            );
-          }
-
-          if (result.collided) {
-            ball.lastHitBrickId = brick.id;
-
-            // Handle special collectible blocks (no deflection, passed through or collected)
-            if (brick.type == BrickType.permanentAdder) {
-              brick.isDestroyed = true;
-              ParticlePool.spawnTextPopup(
-                Vector2(bx + cellWidth / 2, by),
-                '+1 PERM BALL',
-                GameColors.emeraldGreen,
-              );
-              ParticlePool.spawnSparks(
-                Vector2(bx + cellWidth / 2, by + cellHeight / 2),
-                GameColors.emeraldGreen,
-                count: 10,
-              );
-              AudioSynthesizer.instance.playCollectPlusBall();
-              onPermanentBallCollected(1);
-              continue;
-            }
-
-            // ════════════════════════════════════════════════════════════════
-            // SWARM EXPAND: +1 Ball persists for the ENTIRE remaining turn
-            // ════════════════════════════════════════════════════════════════
-            if (brick.type == BrickType.turnBallAdder) {
-              brick.isDestroyed = true;
-              ParticlePool.spawnTextPopup(
-                Vector2(bx + cellWidth / 2, by),
-                '⬡ +BALL TURN!',
-                const Color(0xFF39FF14),
-              );
-              ParticlePool.spawnShockwave(
-                Vector2(bx + cellWidth / 2, by + cellHeight / 2),
-                const Color(0xFF39FF14),
-                initialSize: 10.0,
-              );
-              ParticlePool.spawnSparks(
-                Vector2(bx + cellWidth / 2, by + cellHeight / 2),
-                const Color(0xFF39FF14),
-                count: 14,
-              );
-              AudioSynthesizer.instance.playCollectPlusBall();
-
-              // Spawn a persistent clone with a fresh upward trajectory
-              // so it actively contributes to the current turn instead of 
-              // just sitting there.
-              final rng = math.Random();
-              final launchAngle = -math.pi / 2 + (rng.nextDouble() - 0.5) * (math.pi / 3);
-              final spd = ball.velocity.length;
-              final turnBall = Ball(
-                id: DateTime.now().microsecondsSinceEpoch + _spawnQueue.length + 9999,
-                position: Vector2(bx + cellWidth / 2, by + cellHeight / 2),
-                velocity: Vector2(math.cos(launchAngle) * spd, math.sin(launchAngle) * spd),
-                radius: ball.radius,
-                skin: ball.skin,
-                generation: 0, // Generation 0 = counts as a full permanent-style ball
-              );
-              _spawnQueue.add(turnBall);
-              onTurnBallSpawned(); // Notify controller so HUD can update
-              continue;
-            }
-
-            if (brick.type == BrickType.inAirSplitter) {
-              brick.isDestroyed = true;
-              ParticlePool.spawnTextPopup(
-                Vector2(bx + cellWidth / 2, by),
-                'SWARM x2',
-                GameColors.neonCyan,
-              );
-              ParticlePool.spawnShockwave(
-                Vector2(bx + cellWidth / 2, by + cellHeight / 2),
-                GameColors.neonCyan,
-                initialSize: 8.0,
-              );
-              AudioSynthesizer.instance.playSplitterSwarm();
-
-              // Spawn 90° rotated clone ball
-              final cloneVel = ball.velocity.rotated(math.pi / 2);
-              _spawnQueue.add(
-                Ball(
-                  id: DateTime.now().microsecondsSinceEpoch + _spawnQueue.length,
-                  position: ball.position,
-                  velocity: cloneVel,
-                  radius: ball.radius,
-                  skin: ball.skin,
-                  generation: ball.generation + 1,
-                ),
-              );
-              continue;
-            }
-
-            // Normal solid deflection
-            CollisionSystem.resolveBallCollision(ball, result);
-
-            // Apply damage or trigger special weapon
-            if (brick.type.isSpecialTrigger) {
-              brick.isDestroyed = true;
-              chainManager.queueTrigger(brick);
-              AudioSynthesizer.instance.playBombExplosion();
-              onBrickHit(BrickHitEvent(brick: brick, ball: ball, wasDestroyed: true));
-            } else {
-              final destroyed = brick.applyDamage(ball.damageMultiplier);
-              onBrickHit(BrickHitEvent(brick: brick, ball: ball, wasDestroyed: destroyed));
-
-              final center = Vector2(bx + cellWidth / 2, by + cellHeight / 2);
-              if (destroyed) {
-                ParticlePool.spawnShardBurst(center, brick.primaryColor, count: 8);
-              } else {
-                ParticlePool.spawnSparks(center, brick.primaryColor, count: 4);
-              }
-            }
-
-            break; // One collision per ball sub-step
-          }
-        }
+        // Brick Collisions
+        _handleBrickCollisions(ball, bricks, cellWidth, cellHeight, fallingPowerUps, onBrickHit);
       }
     }
 
-    // Append all spawned clone balls
-    if (_spawnQueue.isNotEmpty) {
-      balls.addAll(_spawnQueue);
-      _spawnQueue.clear();
+    // 3. Update Falling Power-Ups
+    _updatePowerUps(fallingPowerUps, paddle, playfieldHeight, dt, onPowerUpCollected);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // WALL COLLISIONS
+  // ═════════════════════════════════════════════════════════════════════════════
+  void _handleWallCollisions(
+    Ball ball,
+    double playfieldWidth,
+    double playfieldHeight,
+    void Function(Ball) onBallLost,
+  ) {
+    // Left Wall
+    if (ball.position.x - ball.radius < 0) {
+      ball.position.x = ball.radius;
+      ball.velocity.x = ball.velocity.x.abs();
+      AudioSynthesizer.instance.playBrickHitChime(1);
+    }
+    // Right Wall
+    else if (ball.position.x + ball.radius > playfieldWidth) {
+      ball.position.x = playfieldWidth - ball.radius;
+      ball.velocity.x = -ball.velocity.x.abs();
+      AudioSynthesizer.instance.playBrickHitChime(1);
     }
 
-    // Process queued chain reactions (Lasers, Bombs, Nukes)
-    chainManager.processQueue(
-      allBricks: bricks,
-      cellWidth: cellWidth,
-      cellHeight: cellHeight,
-      onExplosion: (center, color) {
-        ParticlePool.spawnShockwave(center, color, initialSize: 15.0);
-        ParticlePool.spawnShardBurst(center, color, count: 14);
-        AudioSynthesizer.instance.playBombExplosion();
-      },
-      onLaser: (start, end, color) {
-        ParticlePool.spawnLaserBeam(start, end, color);
-        AudioSynthesizer.instance.playLaserSweep();
-      },
-    );
+    // Top Wall
+    if (ball.position.y - ball.radius < 0) {
+      ball.position.y = ball.radius;
+      ball.velocity.y = ball.velocity.y.abs();
+      AudioSynthesizer.instance.playBrickHitChime(1);
+    }
+    // Bottom Out-of-Bounds (Ball lost below paddle)
+    else if (ball.position.y - ball.radius > playfieldHeight + 20) {
+      ball.isActive = false;
+      onBallLost(ball);
+    }
+  }
 
-    // Update ball motion trails
-    for (int i = 0; i < balls.length; i++) {
-      if (balls[i].isActive) {
-        balls[i].updateTrail();
+  // ═════════════════════════════════════════════════════════════════════════════
+  // PADDLE COLLISION & ANGLE DEFLECTION
+  // ═════════════════════════════════════════════════════════════════════════════
+  void handlePaddleCollision(Ball ball, Paddle paddle) {
+    _handlePaddleCollision(ball, paddle);
+  }
+
+  void _handlePaddleCollision(Ball ball, Paddle paddle) {
+    if (ball.velocity.y <= 0) return; // Only collide when moving downward
+
+    final pTop = paddle.position.y - paddle.height / 2;
+    final pBottom = paddle.position.y + paddle.height / 2;
+    final pLeft = paddle.position.x - paddle.width / 2;
+    final pRight = paddle.position.x + paddle.width / 2;
+
+    // Check if ball circle overlaps paddle rect
+    if (ball.position.y + ball.radius >= pTop &&
+        ball.position.y - ball.radius <= pBottom &&
+        ball.position.x + ball.radius >= pLeft &&
+        ball.position.x - ball.radius <= pRight) {
+
+      // Reposition ball atop paddle to prevent sticking
+      ball.position.y = pTop - ball.radius;
+
+      // Calculate normalized hit offset: -1.0 (far left) to +1.0 (far right)
+      final hitOffset = ((ball.position.x - paddle.position.x) / (paddle.width / 2)).clamp(-0.95, 0.95);
+
+      // Max bounce angle from vertical = ~65 degrees (1.13 radians)
+      const maxBounceAngle = 65.0 * (math.pi / 180.0);
+      final bounceAngle = hitOffset * maxBounceAngle;
+
+      // Current ball speed (gradually increases per paddle bounce, capped at 540)
+      final currentSpeed = (ball.speed * 1.015).clamp(360.0, 540.0);
+      ball.speed = currentSpeed;
+
+      // Set new velocity based on deflection angle
+      final newVx = currentSpeed * math.sin(bounceAngle);
+      final newVy = -currentSpeed * math.cos(bounceAngle);
+
+      ball.velocity.set(newVx, newVy);
+      ball.hitStreak = 0; // Reset streak on paddle hit
+
+      // Particle effect & Sound
+      ParticlePool.spawnShockwave(Vector2(ball.position.x, pTop), GameColors.neonCyan, maxRadius: 18.0);
+      AudioSynthesizer.instance.playCollectPlusBall();
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // BRICK COLLISIONS
+  // ═════════════════════════════════════════════════════════════════════════════
+  void _handleBrickCollisions(
+    Ball ball,
+    List<Brick> bricks,
+    double cw,
+    double ch,
+    List<PowerUp> fallingPowerUps,
+    void Function(Brick, Ball) onBrickHit,
+  ) {
+    for (int i = 0; i < bricks.length; i++) {
+      final brick = bricks[i];
+      if (brick.isDestroyed) continue;
+
+      final brickRect = Rect.fromLTWH(
+        brick.gridX * cw + 1.5,
+        brick.gridY * ch + 1.5,
+        cw - 3.0,
+        ch - 3.0,
+      );
+
+      // 45-Degree Wedge Reflection
+      if (brick.type.isWedge) {
+        if (_checkWedgeCollision(ball, brick, brickRect)) {
+          _applyDamageAndDrop(brick, ball, fallingPowerUps, onBrickHit, cw, ch, bricks);
+          if (!ball.isFireball) break;
+        }
+      }
+      // Standard AABB Brick Collision
+      else {
+        if (_checkAABBCollision(ball, brickRect)) {
+          _applyDamageAndDrop(brick, ball, fallingPowerUps, onBrickHit, cw, ch, bricks);
+          if (!ball.isFireball) break;
+        }
+      }
+    }
+  }
+
+  bool _checkAABBCollision(Ball ball, Rect rect) {
+    final closestX = ball.position.x.clamp(rect.left, rect.right);
+    final closestY = ball.position.y.clamp(rect.top, rect.bottom);
+
+    final distX = ball.position.x - closestX;
+    final distY = ball.position.y - closestY;
+    final distSq = distX * distX + distY * distY;
+
+    if (distSq < ball.radius * ball.radius) {
+      if (!ball.isFireball) {
+        // Determine collision normal
+        final overlapLeft = (ball.position.x + ball.radius) - rect.left;
+        final overlapRight = rect.right - (ball.position.x - ball.radius);
+        final overlapTop = (ball.position.y + ball.radius) - rect.top;
+        final overlapBottom = rect.bottom - (ball.position.y - ball.radius);
+
+        final minOverlapX = math.min(overlapLeft, overlapRight);
+        final minOverlapY = math.min(overlapTop, overlapBottom);
+
+        if (minOverlapX < minOverlapY) {
+          ball.velocity.x = (distX > 0) ? ball.velocity.x.abs() : -ball.velocity.x.abs();
+        } else {
+          ball.velocity.y = (distY > 0) ? ball.velocity.y.abs() : -ball.velocity.y.abs();
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  bool _checkWedgeCollision(Ball ball, Brick brick, Rect rect) {
+    if (!rect.inflate(ball.radius).contains(Offset(ball.position.x, ball.position.y))) {
+      return false;
+    }
+
+    if (!ball.isFireball) {
+      // 45 degree normal reflection
+      switch (brick.type) {
+        case BrickType.wedgeTopLeft:
+          ball.velocity.set(ball.velocity.y.abs(), ball.velocity.x.abs());
+          break;
+        case BrickType.wedgeTopRight:
+          ball.velocity.set(-ball.velocity.y.abs(), ball.velocity.x.abs());
+          break;
+        case BrickType.wedgeBottomLeft:
+          ball.velocity.set(ball.velocity.y.abs(), -ball.velocity.x.abs());
+          break;
+        case BrickType.wedgeBottomRight:
+          ball.velocity.set(-ball.velocity.y.abs(), -ball.velocity.x.abs());
+          break;
+        default:
+          ball.velocity.y = -ball.velocity.y;
+          break;
+      }
+    }
+    return true;
+  }
+
+  void _applyDamageAndDrop(
+    Brick brick,
+    Ball ball,
+    List<PowerUp> fallingPowerUps,
+    void Function(Brick, Ball) onBrickHit,
+    double cw,
+    double ch,
+    List<Brick> allBricks,
+  ) {
+    final damage = ball.isFireball ? 5 : 1;
+    final isDead = brick.applyDamage(damage);
+
+    ball.hitStreak++;
+    AudioSynthesizer.instance.playBrickHitChime(ball.hitStreak);
+
+    final center = Vector2(brick.gridX * cw + cw / 2, brick.gridY * ch + ch / 2);
+    ParticlePool.spawnShardBurst(center, GameColors.getHpGlowColor(brick.hp), count: 6);
+
+    if (isDead) {
+      onBrickHit(brick, ball);
+
+      // 1. Spawning Falling Power-Up Capsule
+      final pType = brick.dropPowerUp ?? _rollRandomPowerUp();
+      if (pType != null) {
+        fallingPowerUps.add(
+          PowerUp(
+            id: DateTime.now().microsecondsSinceEpoch,
+            type: pType,
+            position: Vector2(center.x, center.y),
+          ),
+        );
+      }
+
+      // 2. Special Brick Triggers
+      if (brick.type == BrickType.clusterBomb || brick.type == BrickType.chainDynamite) {
+        _detonateBomb(brick, allBricks, cw, ch, onBrickHit, ball);
+      } else if (brick.type == BrickType.horizontalLaser) {
+        _fireHorizontalLaser(brick, allBricks, cw, ch, onBrickHit, ball);
+      } else if (brick.type == BrickType.verticalLaser) {
+        _fireVerticalLaser(brick, allBricks, cw, ch, onBrickHit, ball);
+      }
+    }
+  }
+
+  PowerUpType? _rollRandomPowerUp() {
+    // 25% chance of dropping a power-up on standard brick break
+    final rnd = math.Random().nextDouble();
+    if (rnd < 0.08) return PowerUpType.multiball;
+    if (rnd < 0.14) return PowerUpType.fireball;
+    if (rnd < 0.20) return PowerUpType.widePaddle;
+    if (rnd < 0.24) return PowerUpType.laserPaddle;
+    if (rnd < 0.28) return PowerUpType.coins;
+    return null;
+  }
+
+  void _detonateBomb(
+    Brick bomb,
+    List<Brick> allBricks,
+    double cw,
+    double ch,
+    void Function(Brick, Ball) onBrickHit,
+    Ball ball,
+  ) {
+    AudioSynthesizer.instance.playBombExplosion();
+    final center = Vector2(bomb.gridX * cw + cw / 2, bomb.gridY * ch + ch / 2);
+    ParticlePool.spawnShockwave(center, const Color(0xFFFF9100), maxRadius: 60.0);
+
+    for (final b in allBricks) {
+      if (b.isDestroyed) continue;
+      if ((b.gridX - bomb.gridX).abs() <= 1 && (b.gridY - bomb.gridY).abs() <= 1) {
+        b.isDestroyed = true;
+        onBrickHit(b, ball);
+        final bCenter = Vector2(b.gridX * cw + cw / 2, b.gridY * ch + ch / 2);
+        ParticlePool.spawnShardBurst(bCenter, GameColors.solarGold, count: 5);
+      }
+    }
+  }
+
+  void _fireHorizontalLaser(
+    Brick laser,
+    List<Brick> allBricks,
+    double cw,
+    double ch,
+    void Function(Brick, Ball) onBrickHit,
+    Ball ball,
+  ) {
+    AudioSynthesizer.instance.playLaserSweep();
+    for (final b in allBricks) {
+      if (!b.isDestroyed && b.gridY == laser.gridY) {
+        b.isDestroyed = true;
+        onBrickHit(b, ball);
+        final bCenter = Vector2(b.gridX * cw + cw / 2, b.gridY * ch + ch / 2);
+        ParticlePool.spawnShardBurst(bCenter, GameColors.neonCyan, count: 4);
+      }
+    }
+  }
+
+  void _fireVerticalLaser(
+    Brick laser,
+    List<Brick> allBricks,
+    double cw,
+    double ch,
+    void Function(Brick, Ball) onBrickHit,
+    Ball ball,
+  ) {
+    AudioSynthesizer.instance.playLaserSweep();
+    for (final b in allBricks) {
+      if (!b.isDestroyed && b.gridX == laser.gridX) {
+        b.isDestroyed = true;
+        onBrickHit(b, ball);
+        final bCenter = Vector2(b.gridX * cw + cw / 2, b.gridY * ch + ch / 2);
+        ParticlePool.spawnShardBurst(bCenter, GameColors.neonMagenta, count: 4);
+      }
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // FALLING POWER-UPS UPDATE & PADDLE CATCH
+  // ═════════════════════════════════════════════════════════════════════════════
+  void _updatePowerUps(
+    List<PowerUp> powerUps,
+    Paddle paddle,
+    double playfieldHeight,
+    double dt,
+    void Function(PowerUp) onPowerUpCollected,
+  ) {
+    for (int i = powerUps.length - 1; i >= 0; i--) {
+      final p = powerUps[i];
+      p.update(dt);
+
+      // Check if paddle catches the powerup capsule
+      if (paddle.rect.inflate(8.0).contains(Offset(p.position.x, p.position.y))) {
+        p.isCollected = true;
+        onPowerUpCollected(p);
+        AudioSynthesizer.instance.playRewardClaim();
+        ParticlePool.spawnShockwave(Vector2(p.position.x, p.position.y), p.type.color, maxRadius: 22.0);
+        powerUps.removeAt(i);
+        continue;
+      }
+
+      // Check if fallen below screen
+      if (p.position.y > playfieldHeight + 30) {
+        p.isExpired = true;
+        powerUps.removeAt(i);
       }
     }
   }

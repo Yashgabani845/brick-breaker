@@ -14,6 +14,8 @@ class AudioSynthesizer {
   }
 
   bool isMuted = false;
+  bool soundEnabled = true;
+  bool musicEnabled = true;
   double masterVolume = 0.85;
 
   static const int _poolSize = 16;  // larger pool so hits never stomp each other
@@ -24,11 +26,12 @@ class AudioSynthesizer {
   void _initAudioPool() {
     try {
       for (int i = 0; i < _poolSize; i++) {
-        final player = AudioPlayer();
-        player.setReleaseMode(ReleaseMode.stop);
-        // Low-latency mode on Android
-        player.setPlayerMode(PlayerMode.lowLatency);
-        _playerPool.add(player);
+        try {
+          final player = AudioPlayer();
+          player.setReleaseMode(ReleaseMode.stop).catchError((_) {});
+          player.setPlayerMode(PlayerMode.lowLatency).catchError((_) {});
+          _playerPool.add(player);
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('AudioPool init: $e');
@@ -40,6 +43,19 @@ class AudioSynthesizer {
     isMuted = !isMuted;
   }
 
+  void setSoundEnabled(bool enabled) {
+    soundEnabled = enabled;
+    isMuted = !soundEnabled;
+  }
+
+  void setMusicEnabled(bool enabled) {
+    musicEnabled = enabled;
+  }
+
+  void playPowerUpLaser() {
+    playLaserSweep();
+  }
+
   /// Fire-and-forget: grab next player slot and play immediately without awaiting.
   /// Stopping then re-playing on the same player is the fastest path on Android.
   void _playWav(String assetPath, {double volume = 0.85}) {
@@ -48,14 +64,18 @@ class AudioSynthesizer {
       if (_playerPool.isNotEmpty) {
         final player = _playerPool[_nextPlayerIndex];
         _nextPlayerIndex = (_nextPlayerIndex + 1) % _playerPool.length;
-        // Fire-and-forget: do NOT await — prevents frame stalls
-        player.stop().whenComplete(() {
-          player.setVolume((volume * masterVolume).clamp(0.0, 1.0));
-          player.play(AssetSource(assetPath));
+        // Fire-and-forget with error suppression for headless/test environments
+        player.stop().catchError((_) {}).whenComplete(() {
+          try {
+            player.setVolume((volume * masterVolume).clamp(0.0, 1.0)).catchError((_) {});
+            player.play(AssetSource(assetPath)).catchError((_) {});
+          } catch (_) {}
         });
       }
     } catch (_) {
-      invokeWebAudioEngine('playAsset', [assetPath]);
+      try {
+        invokeWebAudioEngine('playAsset', [assetPath]);
+      } catch (_) {}
     }
   }
 

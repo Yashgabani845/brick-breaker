@@ -9,6 +9,21 @@ class ScoreSystem {
   int turnHits = 0;
   int ballsCollectedThisTurn = 0;
 
+  void reset() {
+    resetForNewGame();
+  }
+
+  void addScore(int amount) {
+    currentScore += amount;
+  }
+
+  void recordHit(int damage, bool isArmored) {
+    turnHits += damage;
+    comboCount++;
+    comboMultiplier = (1.0 + (comboCount / 12.0)).clamp(1.0, 10.0);
+    currentScore += (damage * 30 * comboMultiplier).round();
+  }
+
   void resetForNewGame() {
     currentScore = 0;
     comboCount = 0;
@@ -20,7 +35,6 @@ class ScoreSystem {
   void startNewTurn() {
     turnHits = 0;
     ballsCollectedThisTurn = 0;
-    // Don't completely wipe combo on fresh turn to reward fast play
   }
 
   /// Registers a brick hit and increments score

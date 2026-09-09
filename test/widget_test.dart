@@ -4,11 +4,18 @@ import 'package:bricks_breaker_3d/main.dart';
 
 void main() {
   testWidgets('Bricks Breaker 3D App smoke test', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'has_completed_tutorial': true});
     await tester.pumpWidget(const BricksBreaker3DApp());
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Loading...'), findsOneWidget);
 
-    expect(find.text('BRICKS BREAKER'), findsOneWidget);
-    expect(find.text('3D'), findsOneWidget);
+    // Advance past splash timer into HomeScreen
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('Level Map'), findsOneWidget);
+    expect(find.text('Daily'), findsOneWidget);
+    expect(find.text('Challenge'), findsOneWidget);
+    expect(find.text('Shop'), findsOneWidget);
+    expect(find.text('Balls'), findsOneWidget);
   });
 }

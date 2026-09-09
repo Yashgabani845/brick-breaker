@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'core/constants/game_colors.dart';
 import 'storage/game_storage.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class BricksBreaker3DApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bricks Breaker 3D',
+      title: 'Brick Smash',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -47,7 +48,7 @@ class BricksBreaker3DApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
       ),
-      home: const HomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }

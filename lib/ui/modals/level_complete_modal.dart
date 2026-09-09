@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/game_colors.dart';
-import '../components/glass_button.dart';
-import '../components/neon_glow_text.dart';
+import '../../game/systems/audio_synthesizer.dart';
 
-/// Glassmorphic Level Victory Modal
+/// Level Complete Modal (Screen 9 from Master Reference Mockup)
+/// Features glowing "LEVEL COMPLETE!" title, 3 golden stars, Score & Best Score with NEW! badge,
+/// Coins + Gems reward breakdown, Next Level (green), 2X Coins (orange), and Home button.
 class LevelCompleteModal extends StatelessWidget {
   final int levelNumber;
   final int score;
   final int stars;
   final int coinsEarned;
-  final int ballsCollected;
+  final int gemsEarned;
   final VoidCallback onNextLevel;
   final VoidCallback onDoubleReward;
   final VoidCallback onMenu;
@@ -20,7 +20,7 @@ class LevelCompleteModal extends StatelessWidget {
     required this.score,
     required this.stars,
     required this.coinsEarned,
-    required this.ballsCollected,
+    this.gemsEarned = 5,
     required this.onNextLevel,
     required this.onDoubleReward,
     required this.onMenu,
@@ -28,120 +28,256 @@ class LevelCompleteModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'LEVEL CLEARED!',
-          style: TextStyle(
-            fontSize: 22.0,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 1.0,
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D162B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF2A3D66), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-        ),
-        const SizedBox(height: 14),
-
-        // Stars Display
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(3, (index) {
-            final isLit = index < stars;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5.0),
-              child: Icon(
-                Icons.star_rounded,
-                size: 40.0,
-                color: isLit ? GameColors.solarGold : Colors.white24,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header: Close X
+          Align(
+            alignment: Alignment.topRight,
+            child: GestureDetector(
+              onTap: onMenu,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF131D36),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
               ),
-            );
-          }),
-        ),
-        const SizedBox(height: 16),
-
-        // Score & Stats Container
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white12),
+            ),
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('FINAL SCORE', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text(
-                    '$score',
-                    style: const TextStyle(color: GameColors.neonCyan, fontSize: 18, fontWeight: FontWeight.w900),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('COINS EARNED', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text(
-                    '+$coinsEarned 🪙',
-                    style: const TextStyle(color: GameColors.electricAmber, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              if (ballsCollected > 0) ...[
+
+          // Title
+          const Text(
+            'LEVEL COMPLETE!',
+            style: TextStyle(
+              fontSize: 22.0,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF00E676),
+              letterSpacing: 1.2,
+              shadows: [
+                Shadow(color: Color(0xFF00E676), blurRadius: 10),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 3 Giant Glowing Gold Stars
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (index) {
+              final isLit = index < stars;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Icon(
+                  Icons.star_rounded,
+                  size: 42.0,
+                  color: isLit ? const Color(0xFFFFD700) : const Color(0xFF223254),
+                  shadows: isLit
+                      ? const [
+                          Shadow(color: Color(0xFFFF9100), blurRadius: 12),
+                        ]
+                      : null,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+
+          // Stats Card
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF101A36),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF223565), width: 1.2),
+            ),
+            child: Column(
+              children: [
+                _buildStatRow('Score', score.toString()),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('PERMANENT AMMO', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                    Text(
-                      '+$ballsCollected BALLS',
-                      style: const TextStyle(color: GameColors.emeraldGreen, fontSize: 16, fontWeight: FontWeight.bold),
+                    const Text(
+                      'Best Score',
+                      style: TextStyle(color: Color(0xFF8E9EB8), fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          score.toString(),
+                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9100),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'NEW!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Divider(color: Color(0xFF223565), height: 1),
+                ),
+                _buildRewardRow('Coins', '+$coinsEarned', const Color(0xFFFFD700), '🪙'),
+                const SizedBox(height: 6),
+                _buildRewardRow('Gems', '+$gemsEarned', const Color(0xFFE040FB), '💎'),
               ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
+          const SizedBox(height: 18),
 
-        // Next Level CTA
-        GlassButton(
-          onPressed: onNextLevel,
-          gradient: const [GameColors.emeraldGreen, Color(0xFF009960)],
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('NEXT LEVEL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              SizedBox(width: 8),
-              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-            ],
+          // Next Level Button (Green)
+          GestureDetector(
+            onTap: () {
+              AudioSynthesizer.instance.playUiClick();
+              onNextLevel();
+            },
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00E676), Color(0xFF00C853)],
+                ),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00E676).withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'Next Level',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-        // Double Rewards Button
-        GlassButton(
-          onPressed: onDoubleReward,
-          gradient: const [GameColors.solarGold, Color(0xFFFF8800)],
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.video_library_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('2X REWARD (FREE)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-            ],
+          // 2X Coins - Watch Ad Button (Orange)
+          GestureDetector(
+            onTap: () {
+              AudioSynthesizer.instance.playUiClick();
+              onDoubleReward();
+            },
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF9100), Color(0xFFFF6D00)],
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF9100).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.smart_display_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    '2X Coins - Watch Ad',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-        GlassButton(
-          onPressed: onMenu,
-          isPrimary: false,
-          child: const Text('MAIN MENU', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 14)),
+          // Home Icon Button
+          IconButton(
+            icon: const Icon(Icons.home_rounded, color: Colors.white60, size: 24),
+            onPressed: () {
+              AudioSynthesizer.instance.playUiClick();
+              onMenu();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF8E9EB8), fontSize: 13, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRewardRow(String label, String value, Color color, String icon) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 13)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(color: Color(0xFF8E9EB8), fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900),
         ),
       ],
     );

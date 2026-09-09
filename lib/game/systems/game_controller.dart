@@ -6,25 +6,22 @@ import '../../core/math/vector2.dart';
 import '../models/ball.dart';
 import '../models/brick.dart';
 import '../models/level_data.dart';
+import '../models/paddle.dart';
 import '../models/particle.dart';
+import '../models/powerup.dart';
 import '../physics/physics_engine.dart';
-import '../physics/trajectory_predictor.dart';
 import 'audio_synthesizer.dart';
 import 'score_system.dart';
 
-/// Game States
 enum GameState {
-  aiming,
-  firing,
-  simulating,
-  resolving,
-  boardAdvance,
-  levelComplete,
-  levelFailed,
-  paused,
+  aiming,       // Ball on paddle, ready to launch
+  playing,      // Real-time ball in play
+  levelComplete,// All target bricks cleared
+  levelFailed,  // 0 lives remaining
+  paused,       // Game paused
 }
 
-/// Central Game Controller and State Manager
+/// Central Controller for Real-Time Paddle-Controlled Brick Smash
 class GameController extends ChangeNotifier {
   late LevelData currentLevel;
   GameState state = GameState.aiming;
@@ -37,32 +34,31 @@ class GameController extends ChangeNotifier {
   double cellHeight = 25.0;
 
   // Entities
-  List<Brick> bricks = [];
+  late Paddle paddle;
   final List<Ball> balls = [];
-  final Vector2 launcherPosition = Vector2(180, 540);
-  Vector2? firstLandedPosition;
+  final List<PowerUp> fallingPowerUps = [];
+  List<Brick> bricks = [];
 
-  // Ball Ammunition & Cosmetics
-  int permanentBalls = 35;
-  int ballsToLaunch = 0;
-  double launchTimer = 0.0;
-  Vector2 currentAimDirection = Vector2(0, -1);
-  List<TrajectoryPoint>? currentTrajectory;
-  bool isDraggingAim = false;
+  // Lives & Ammunition
+  int lives = 3;
+  int initialBalls = 1;
   BallSkin currentBallSkin = BallSkin.neonWhite;
+  PaddleSkin currentPaddleSkin = PaddleSkin.neonBlade;
 
   // Systems
   late PhysicsEngine physicsEngine;
   final ScoreSystem scoreSystem = ScoreSystem();
 
-  // Speed & Boosters
-  double speedMultiplier = 1.0;
+  // Boosters & Stats
+  int superNukeBoosterCount = 3;
   int lightningBoosterCount = 3;
-  int superNukeBoosterCount = 2;
+  int triBallBoosterCount = 3;
+  int coinBoosterCount = 3;
   int turnsPlayed = 0;
-  int turnBallsThisTurn = 0; // Extra balls spawned by +BALL TURN powerup this turn
+  double speedMultiplier = 1.0;
 
   GameController() {
+    paddle = Paddle(position: Vector2(180, 540));
     _initPhysics();
   }
 
@@ -79,7 +75,7 @@ class GameController extends ChangeNotifier {
     playfieldWidth = width;
     playfieldHeight = height;
     cellWidth = width / currentLevel.columns;
-    cellHeight = (playfieldHeight * 0.78) / currentLevel.rows;
+    cellHeight = (playfieldHeight * 0.72) / currentLevel.rows;
 
     physicsEngine = PhysicsEngine(
       columns: currentLevel.columns,
@@ -88,8 +84,11 @@ class GameController extends ChangeNotifier {
       cellHeight: cellHeight,
     );
 
-    if (state == GameState.aiming) {
-      launcherPosition.set(playfieldWidth / 2, playfieldHeight - 14.0);
+    paddle.position.set(playfieldWidth / 2, playfieldHeight - 32.0);
+    paddle.targetX = paddle.position.x;
+
+    if (state == GameState.aiming && balls.isNotEmpty) {
+      balls.first.position.set(paddle.position.x, paddle.position.y - paddle.height / 2 - balls.first.radius - 2);
     }
     notifyListeners();
   }
@@ -98,318 +97,285 @@ class GameController extends ChangeNotifier {
     currentLevel = level.clone();
     if (diff != null) difficulty = diff;
 
-    // Apply difficulty HP multiplier to initial bricks
-    bricks = currentLevel.initialBricks.map((b) {
-      final adjustedHp = (b.hp * difficulty.hpMultiplier).round().clamp(1, 9999);
-      return b.copyWith(hp: adjustedHp, maxHp: adjustedHp);
-    }).toList();
-
-    permanentBalls = currentLevel.startingBalls;
-    balls.clear();
+    bricks = currentLevel.initialBricks.map((b) => b.copyWith()).toList();
+    fallingPowerUps.clear();
     ParticlePool.clear();
-    scoreSystem.resetForNewGame();
+    scoreSystem.reset();
 
+    lives = 3;
     state = GameState.aiming;
-    speedMultiplier = 1.0;
-    firstLandedPosition = null;
-    turnsPlayed = 0;
 
-    final defaultY = playfieldHeight > 0 ? (playfieldHeight - 12.0) : 550.0;
-    launcherPosition.set(playfieldWidth > 0 ? (playfieldWidth / 2) : 200.0, defaultY);
-    _updateTrajectory();
-    notifyListeners();
-  }
+    paddle.position.set(playfieldWidth / 2, playfieldHeight - 32.0);
+    paddle.targetX = paddle.position.x;
+    paddle.isWide = false;
+    paddle.isLaserActive = false;
+    paddle.width = paddle.baseWidth;
+    paddle.skin = currentPaddleSkin;
 
-  // --- Aiming and Input ---
-
-  void onAimStart(Offset localPos) {
-    if (state != GameState.aiming) return;
-    isDraggingAim = true;
-    onAimUpdate(localPos);
-  }
-
-  void onAimUpdate(Offset localPos) {
-    if (state != GameState.aiming || !isDraggingAim) return;
-
-    // Vector from launcher to touch point
-    final touchVec = Vector2(localPos.dx - launcherPosition.x, localPos.dy - launcherPosition.y);
-
-    if (touchVec.y < -15.0) {
-      // Direct drag aiming (dragging upward)
-      currentAimDirection = touchVec.normalized();
-    } else if (touchVec.y > 15.0) {
-      // Pull-back sling aiming (dragging downward)
-      currentAimDirection = (-touchVec).normalized();
-    } else {
-      return;
-    }
-
-    // Clamp angle to prevent pure horizontal lock-in
-    currentAimDirection.clampTrajectoryAngle(minVerticalRatio: 0.15);
-    _updateTrajectory();
-    notifyListeners();
-  }
-
-  void onAimEnd() {
-    if (state != GameState.aiming || !isDraggingAim) return;
-    isDraggingAim = false;
-
-    // Fire balls!
-    _fireSwarm();
-  }
-
-  void _updateTrajectory() {
-    currentTrajectory = TrajectoryPredictor.predict(
-      origin: launcherPosition,
-      direction: currentAimDirection,
-      playfieldWidth: playfieldWidth,
-      playfieldHeight: playfieldHeight,
-      cellWidth: cellWidth,
-      cellHeight: cellHeight,
-      bricks: bricks,
-      maxBounces: difficulty.maxAimBounces,
-      ballRadius: GameConstants.baseBallRadius,
+    // Initialize 1 primary ball stuck to paddle
+    balls.clear();
+    final startBall = Ball(
+      id: 1,
+      position: Vector2(paddle.position.x, paddle.position.y - paddle.height / 2 - 9.0),
+      isStuckToPaddle: true,
+      skin: currentBallSkin,
     );
-  }
+    balls.add(startBall);
 
-  void _fireSwarm() {
-    state = GameState.firing;
-    ballsToLaunch = permanentBalls;
-    launchTimer = 0.0;
-    firstLandedPosition = null;
-    currentTrajectory = null;
-    turnsPlayed++;
-    turnBallsThisTurn = 0; // Reset turn-ball counter
-    scoreSystem.startNewTurn();
-    AudioSynthesizer.instance.playUiClick();
     notifyListeners();
   }
 
-  // --- Main Tick Simulation ---
-
-  void update(double dt) {
-    if (state == GameState.paused) return;
-
-    // 1. Spawning balls during Firing phase
-    if (state == GameState.firing) {
-      launchTimer += dt * speedMultiplier;
-      while (launchTimer >= GameConstants.ballLaunchIntervalSeconds && ballsToLaunch > 0) {
-        launchTimer -= GameConstants.ballLaunchIntervalSeconds;
-        ballsToLaunch--;
-
-        // Staggered launch with tiny micro-jitter for organic swarm stream
-        final randJitter = (math.Random().nextDouble() - 0.5) * 0.015;
-        final launchVel = currentAimDirection.rotated(randJitter) * GameConstants.baseBallSpeed;
-
-        balls.add(
-          Ball(
-            id: DateTime.now().microsecondsSinceEpoch + balls.length,
-            position: launcherPosition,
-            velocity: launchVel,
-            radius: GameConstants.baseBallRadius,
-            skin: currentBallSkin,
-          ),
-        );
-      }
-
-      if (ballsToLaunch <= 0) {
-        state = GameState.simulating;
-      }
+  // ═════════════════════════════════════════════════════════════════════════════
+  // INPUT & CONTROLS
+  // ═════════════════════════════════════════════════════════════════════════════
+  void onPaddleDrag(double touchX) {
+    paddle.targetX = touchX;
+    if (state == GameState.aiming && balls.isNotEmpty) {
+      balls.first.position.set(paddle.position.x, paddle.position.y - paddle.height / 2 - balls.first.radius - 2);
     }
+    notifyListeners();
+  }
 
-    // 2. Simulating physics for active balls
-    if (state == GameState.firing || state == GameState.simulating) {
+  void launchBall() {
+    if (state != GameState.aiming || balls.isEmpty) return;
+
+    final ball = balls.first;
+    ball.isStuckToPaddle = false;
+
+    // Launch slightly angled upward towards playfield
+    const launchSpeed = 380.0;
+    const launchAngle = 15.0 * (math.pi / 180.0); // 15 degrees initial angle
+    ball.setVelocity(launchSpeed * math.sin(launchAngle), -launchSpeed * math.cos(launchAngle));
+
+    state = GameState.playing;
+    AudioSynthesizer.instance.playCollectPlusBall();
+    notifyListeners();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // MAIN UPDATE LOOP
+  // ═════════════════════════════════════════════════════════════════════════════
+  void update(double dt) {
+    if (state != GameState.playing && state != GameState.aiming) return;
+
+    final scaledDt = dt * speedMultiplier;
+
+    // Update Particles
+    ParticlePool.update(scaledDt);
+
+    if (state == GameState.playing) {
       physicsEngine.update(
-        dt: dt,
+        dt: scaledDt,
         balls: balls,
+        paddle: paddle,
         bricks: bricks,
+        fallingPowerUps: fallingPowerUps,
         playfieldWidth: playfieldWidth,
         playfieldHeight: playfieldHeight,
-        cellWidth: cellWidth,
-        cellHeight: cellHeight,
-        speedMultiplier: speedMultiplier,
-        onBrickHit: (hitEvent) {
-          scoreSystem.registerHit(
-            brick: hitEvent.brick,
-            wasDestroyed: hitEvent.wasDestroyed,
-            difficulty: difficulty,
-          );
-          AudioSynthesizer.instance.playBrickHitChime(scoreSystem.comboCount);
-        },
-        onPermanentBallCollected: (count) {
-          permanentBalls += count;
-          scoreSystem.ballsCollectedThisTurn += count;
-        },
-        onTurnBallSpawned: () {
-          // A turn-temporary ball was just spawned by a +BALL TURN powerup.
-          // We track it for the HUD and mark it in score. The ball object
-          // is already in the balls list via the spawn queue.
-          turnBallsThisTurn++;
-        },
-        onBallLanded: (ball) {
-          // First ball to land establishes the new launcher horizontal position
-          if (firstLandedPosition == null) {
-            firstLandedPosition = Vector2(ball.position.x.clamp(20.0, playfieldWidth - 20.0), launcherPosition.y);
-          }
-        },
+        onBrickHit: _handleBrickHit,
+        onPowerUpCollected: _handlePowerUpCollected,
+        onBallLost: _handleBallLost,
       );
 
-      // Check if all bricks are cleared -> Level Complete
+      // Check level victory condition
       final remainingBricks = bricks.where((b) => !b.isDestroyed && b.type.isDamageable).length;
       if (remainingBricks == 0) {
-        _handleLevelComplete();
-        return;
+        state = GameState.levelComplete;
+        AudioSynthesizer.instance.playVictory();
+        notifyListeners();
       }
-
-      // Check if all balls have finished their flight
-      final activeBalls = balls.where((b) => b.isActive).length;
-      if (state == GameState.simulating && activeBalls == 0) {
-        _endTurnAndAdvanceBoard();
+    } else {
+      // While aiming, smoothly follow paddle
+      paddle.update(scaledDt, 0, playfieldWidth);
+      if (balls.isNotEmpty) {
+        balls.first.position.set(paddle.position.x, paddle.position.y - paddle.height / 2 - balls.first.radius - 2);
       }
     }
 
-    // Update Particle Systems
-    ParticlePool.update(dt);
     notifyListeners();
   }
 
-  // --- End of Turn & Board Advance ---
+  void _handleBrickHit(Brick brick, Ball ball) {
+    scoreSystem.recordHit(1, brick.type == BrickType.armoredBrick);
+  }
 
-  void _endTurnAndAdvanceBoard() {
-    state = GameState.boardAdvance;
-    balls.clear();
-
-    // Move launcher to new position
-    if (firstLandedPosition != null) {
-      launcherPosition.x = firstLandedPosition!.x;
-    }
-
-    // Advance all bricks downward by 1 row
-    bool breachedDanger = false;
-    for (int i = 0; i < bricks.length; i++) {
-      final b = bricks[i];
-      if (!b.isDestroyed) {
-        b.gridY += 1;
-        if (b.gridY >= currentLevel.dangerRow) {
-          breachedDanger = true;
+  void _handlePowerUpCollected(PowerUp powerUp) {
+    switch (powerUp.type) {
+      case PowerUpType.multiball:
+        // Spawn 2 extra balls at current primary ball location
+        if (balls.length < 5) {
+          final refPos = balls.isNotEmpty ? balls.first.position : paddle.position;
+          final extra1 = Ball(
+            id: DateTime.now().microsecondsSinceEpoch,
+            position: Vector2(refPos.x, refPos.y),
+            velocity: Vector2(-220, -320),
+            skin: currentBallSkin,
+          );
+          final extra2 = Ball(
+            id: DateTime.now().microsecondsSinceEpoch + 1,
+            position: Vector2(refPos.x, refPos.y),
+            velocity: Vector2(220, -320),
+            skin: currentBallSkin,
+          );
+          balls.addAll([extra1, extra2]);
         }
-      }
-    }
+        break;
 
-    // Check Turn Limit (if level has one)
-    if (currentLevel.turnLimit != null && turnsPlayed >= currentLevel.turnLimit!) {
-      breachedDanger = true;
-    }
+      case PowerUpType.fireball:
+        for (final b in balls) {
+          b.activateFireball(8.0);
+        }
+        break;
 
-    if (breachedDanger) {
-      state = GameState.levelFailed;
-      notifyListeners();
-    } else {
+      case PowerUpType.widePaddle:
+        paddle.activateWidePaddle(12.0);
+        break;
+
+      case PowerUpType.laserPaddle:
+        paddle.activateLaserPaddle(10.0);
+        break;
+
+      case PowerUpType.slowBall:
+        for (final b in balls) {
+          b.speed = 280.0;
+          b.velocity = b.velocity.normalized() * 280.0;
+        }
+        break;
+
+      case PowerUpType.bomb:
+        useSuperNukeBooster();
+        break;
+
+      case PowerUpType.coins:
+        scoreSystem.addScore(500);
+        break;
+    }
+  }
+
+  void _handleBallLost(Ball lostBall) {
+    balls.remove(lostBall);
+
+    // If active balls remain, player is still in the round!
+    if (balls.isNotEmpty) return;
+
+    // All balls lost: lose 1 life
+    lives--;
+    AudioSynthesizer.instance.playBombExplosion();
+
+    if (lives > 0) {
+      // Reset ball on paddle for next life
       state = GameState.aiming;
-      _updateTrajectory();
-      notifyListeners();
-    }
-  }
-
-  void _handleLevelComplete() {
-    state = GameState.levelComplete;
-    balls.clear();
-    AudioSynthesizer.instance.playVictory();
-    notifyListeners();
-  }
-
-  // --- Boosters ---
-
-  void toggleSpeed() {
-    if (speedMultiplier == 1.0) {
-      speedMultiplier = 2.0;
-    } else if (speedMultiplier == 2.0) {
-      speedMultiplier = 3.0;
+      final newBall = Ball(
+        id: DateTime.now().microsecondsSinceEpoch,
+        position: Vector2(paddle.position.x, paddle.position.y - paddle.height / 2 - 9.0),
+        isStuckToPaddle: true,
+        skin: currentBallSkin,
+      );
+      balls.add(newBall);
     } else {
-      speedMultiplier = 1.0;
+      // 0 lives remaining: Game Over
+      state = GameState.levelFailed;
     }
     notifyListeners();
   }
 
-  void triggerRecallMagnet() {
-    if (state != GameState.simulating && state != GameState.firing) return;
-    for (final ball in balls) {
-      if (ball.isActive) {
-        ball.velocity.set(0, GameConstants.maxBallSpeed); // Pull straight down
-      }
-    }
-    notifyListeners();
-  }
-
-  void useLightningBooster() {
-    if (lightningBoosterCount <= 0 || state != GameState.aiming) return;
-    lightningBoosterCount--;
-
-    // Clears the bottom-most 2 active rows
-    int maxActiveRow = 0;
-    for (final b in bricks) {
-      if (!b.isDestroyed && b.gridY > maxActiveRow) maxActiveRow = b.gridY;
-    }
-
-    for (final b in bricks) {
-      if (!b.isDestroyed && b.gridY >= maxActiveRow - 1) {
-        b.isDestroyed = true;
-        final center = Vector2(b.gridX * cellWidth + cellWidth / 2, b.gridY * cellHeight + cellHeight / 2);
-        ParticlePool.spawnShockwave(center, GameColors.neonCyan);
-      }
-    }
-    AudioSynthesizer.instance.playLaserSweep();
-    notifyListeners();
-  }
-
+  // ═════════════════════════════════════════════════════════════════════════════
+  // IN-GAME BOOSTER SKILLS (BOTTOM DOCK)
+  // ═════════════════════════════════════════════════════════════════════════════
   void useSuperNukeBooster() {
-    if (superNukeBoosterCount <= 0 || state != GameState.aiming) return;
+    if (superNukeBoosterCount <= 0) return;
     superNukeBoosterCount--;
 
     for (final b in bricks) {
       if (!b.isDestroyed) {
-        b.applyDamage(b.hp ~/ 2 + 30);
+        b.applyDamage(b.hp ~/ 2 + 10);
         final center = Vector2(b.gridX * cellWidth + cellWidth / 2, b.gridY * cellHeight + cellHeight / 2);
-        ParticlePool.spawnShardBurst(center, GameColors.neonPurple, count: 6);
+        ParticlePool.spawnShardBurst(center, GameColors.neonPurple, count: 5);
       }
     }
     AudioSynthesizer.instance.playBombExplosion();
     notifyListeners();
   }
 
-  void setBallSkin(BallSkin skin) {
-    currentBallSkin = skin;
-    notifyListeners();
-  }
+  void useLightningBooster() {
+    if (lightningBoosterCount <= 0) return;
+    lightningBoosterCount--;
 
-  void addPermanentBalls(int count) {
-    permanentBalls += count;
-    notifyListeners();
-  }
-
-  void clearAllBricks() {
+    // Obliterate bottom-most row of bricks
+    int maxRow = 0;
     for (final b in bricks) {
-      b.isDestroyed = true;
+      if (!b.isDestroyed && b.gridY > maxRow) maxRow = b.gridY;
     }
-    notifyListeners();
-  }
 
-  void pushBricksUp(int rows) {
     for (final b in bricks) {
-      if (!b.isDestroyed) {
-        b.gridY = (b.gridY - rows).clamp(1, 20);
+      if (!b.isDestroyed && b.gridY == maxRow) {
+        b.isDestroyed = true;
+        final center = Vector2(b.gridX * cellWidth + cellWidth / 2, b.gridY * cellHeight + cellHeight / 2);
+        ParticlePool.spawnShockwave(center, GameColors.neonCyan, maxRadius: 35.0);
       }
     }
-    state = GameState.aiming;
+    AudioSynthesizer.instance.playLaserSweep();
+    notifyListeners();
+  }
+
+  void useTriBallBooster() {
+    if (triBallBoosterCount <= 0) return;
+    triBallBoosterCount--;
+
+    _handlePowerUpCollected(PowerUp(id: 0, type: PowerUpType.multiball, position: paddle.position));
+    AudioSynthesizer.instance.playSplitterSwarm();
+    notifyListeners();
+  }
+
+  void useCoinBooster() {
+    if (coinBoosterCount <= 0) return;
+    coinBoosterCount--;
+    scoreSystem.addScore(1000);
+    AudioSynthesizer.instance.playRewardClaim();
+    notifyListeners();
+  }
+
+  void toggleSpeed() {
+    speedMultiplier = (speedMultiplier == 1.0) ? 1.5 : 1.0;
     notifyListeners();
   }
 
   void togglePause() {
     if (state == GameState.paused) {
-      state = GameState.aiming;
-    } else {
+      state = GameState.playing;
+    } else if (state == GameState.playing || state == GameState.aiming) {
       state = GameState.paused;
     }
     notifyListeners();
+  }
+
+  void triggerRecallMagnet() {
+    // Magnet pulls ball back to paddle
+    for (final ball in balls) {
+      ball.velocity.set(0, 0);
+      ball.isStuckToPaddle = true;
+      ball.position.set(paddle.position.x, paddle.position.y - paddle.height / 2 - ball.radius - 2);
+    }
+    state = GameState.aiming;
+    AudioSynthesizer.instance.playPowerUpLaser();
+    notifyListeners();
+  }
+
+  void revive() {
+    lives = 3;
+    state = GameState.aiming;
+    balls.clear();
+    final newBall = Ball(
+      id: DateTime.now().microsecondsSinceEpoch,
+      position: Vector2(paddle.position.x, paddle.position.y - paddle.height / 2 - 9.0),
+      isStuckToPaddle: true,
+      skin: currentBallSkin,
+    );
+    balls.add(newBall);
+    notifyListeners();
+  }
+
+  void pushBricksUp(int rows) {
+    revive();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/game_constants.dart';
 import '../game/models/ball.dart';
+import '../game/models/paddle.dart';
 
 /// Offline Game Storage System using SharedPreferences
 class GameStorage {
@@ -65,10 +66,38 @@ class GameStorage {
     await _prefs.setInt('gems', current + amount);
   }
 
+  Future<bool> spendGems(int amount) async {
+    final current = getGems();
+    if (current >= amount) {
+      await _prefs.setInt('gems', current - amount);
+      return true;
+    }
+    return false;
+  }
+
+  // --- Tutorial & Onboarding ---
+  bool hasCompletedTutorial() => _prefs.getBool('has_completed_tutorial') ?? false;
+  Future<void> setCompletedTutorial(bool completed) async {
+    await _prefs.setBool('has_completed_tutorial', completed);
+  }
+
+  // --- Haptics ---
+  bool getHapticsEnabled() => _prefs.getBool('haptics_enabled') ?? true;
+  Future<void> setHapticsEnabled(bool enabled) async {
+    await _prefs.setBool('haptics_enabled', enabled);
+  }
+
+  // --- Clear / Reset ---
+  Future<void> clearAllData() async {
+    await _prefs.clear();
+  }
+
   // --- Ball Cosmetics ---
 
   List<String> getUnlockedSkins() =>
       _prefs.getStringList('unlocked_skins') ?? [BallSkin.neonWhite.name];
+
+  bool isSkinUnlocked(BallSkin skin) => getUnlockedSkins().contains(skin.name);
 
   Future<void> unlockSkin(BallSkin skin) async {
     final list = getUnlockedSkins();
@@ -90,6 +119,35 @@ class GameStorage {
 
   Future<void> setSelectedSkin(BallSkin skin) async {
     await _prefs.setString('selected_skin', skin.name);
+  }
+
+  // --- Paddle Cosmetics ---
+
+  List<String> getUnlockedPaddleSkins() =>
+      _prefs.getStringList('unlocked_paddles') ?? [PaddleSkin.neonBlade.name];
+
+  bool isPaddleSkinUnlocked(PaddleSkin skin) => getUnlockedPaddleSkins().contains(skin.name);
+
+  Future<void> unlockPaddleSkin(PaddleSkin skin) async {
+    final list = getUnlockedPaddleSkins();
+    if (!list.contains(skin.name)) {
+      list.add(skin.name);
+      await _prefs.setStringList('unlocked_paddles', list);
+    }
+  }
+
+  PaddleSkin getSelectedPaddleSkin() {
+    final name = _prefs.getString('selected_paddle');
+    if (name != null) {
+      for (final s in PaddleSkin.values) {
+        if (s.name == name) return s;
+      }
+    }
+    return PaddleSkin.neonBlade;
+  }
+
+  Future<void> setSelectedPaddleSkin(PaddleSkin skin) async {
+    await _prefs.setString('selected_paddle', skin.name);
   }
 
   // --- Difficulty Mode ---
@@ -114,7 +172,6 @@ class GameStorage {
   }
 
   // --- Theme Mode (Dual Black Options) ---
-  // 0: OLED True Black (#000000), 1: Cyber Space Void (#070D1B)
   int getDarkThemeIndex() => _prefs.getInt('dark_theme_index') ?? 0;
   Future<void> setDarkThemeIndex(int index) async {
     await _prefs.setInt('dark_theme_index', index);

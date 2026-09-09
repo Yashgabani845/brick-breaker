@@ -113,13 +113,13 @@ class ParticlePool {
     }
   }
 
-  static void spawnShockwave(Vector2 center, Color color, {double initialSize = 10.0, double life = 0.35}) {
+  static void spawnShockwave(Vector2 center, Color color, {double initialSize = 10.0, double? maxRadius, double life = 0.35}) {
     _spawn(
       type: ParticleType.shockwave,
       pos: center,
       vel: Vector2.zero(),
       life: life,
-      size: initialSize,
+      size: maxRadius ?? initialSize,
       color: color,
     );
   }

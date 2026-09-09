@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
 import '../../core/constants/game_constants.dart';
@@ -8,27 +9,30 @@ import '../../game/rendering/game_painter.dart';
 import '../../game/systems/audio_synthesizer.dart';
 import '../../game/systems/game_controller.dart';
 import '../../storage/game_storage.dart';
-import '../components/glass_card.dart';
 import '../components/glass_modal.dart';
 import '../modals/game_over_modal.dart';
 import '../modals/level_complete_modal.dart';
 import '../modals/pause_modal.dart';
-import '../modals/sandbox_debug_modal.dart';
 import '../modals/settings_modal.dart';
 
-/// Interactive Gameplay Screen for Bricks Breaker 3D
+import '../../game/models/paddle.dart';
+
+/// Interactive Gameplay Screen for Brick Smash
+/// Matches Screen 7 from Master Mockup with 3D beveled bricks, responsive paddle, lives counter, and 4-slot booster dock.
 class GameplayScreen extends StatefulWidget {
   final LevelData levelData;
   final DifficultyMode difficulty;
   final int initialBalls;
   final BallSkin ballSkin;
+  final PaddleSkin? paddleSkin;
 
   const GameplayScreen({
     super.key,
     required this.levelData,
     this.difficulty = DifficultyMode.standard,
-    this.initialBalls = 35,
+    this.initialBalls = 1,
     this.ballSkin = BallSkin.neonWhite,
+    this.paddleSkin,
   });
 
   @override
@@ -40,18 +44,19 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
   late final AnimationController _ticker;
   double _lastTime = 0.0;
   bool _modalOpen = false;
+  int _highScore = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = GameController();
     _controller.currentBallSkin = widget.ballSkin;
+    _controller.currentPaddleSkin = widget.paddleSkin ?? GameStorage.instance.getSelectedPaddleSkin();
     _controller.loadLevel(widget.levelData, diff: widget.difficulty);
-    _controller.permanentBalls = widget.initialBalls;
+    _highScore = GameStorage.instance.getHighScore();
 
     _controller.addListener(_onGameControllerUpdated);
 
-    // High performance continuous render ticker
     _ticker = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -86,12 +91,13 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
     _modalOpen = true;
     final stars = _controller.scoreSystem.calculateStars(_controller.currentLevel.targetScore);
     const coins = GameConstants.coinsPerLevelClear;
+    const gems = 5;
 
-    // Persist progress
     await GameStorage.instance.setHighestLevelUnlocked(_controller.currentLevel.levelNumber + 1);
     await GameStorage.instance.setStarsForLevel(_controller.currentLevel.levelNumber, stars);
     await GameStorage.instance.setHighScore(_controller.scoreSystem.currentScore);
     await GameStorage.instance.addCoins(coins);
+    await GameStorage.instance.addGems(gems);
 
     if (!mounted) return;
 
@@ -103,7 +109,7 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
         score: _controller.scoreSystem.currentScore,
         stars: stars,
         coinsEarned: coins,
-        ballsCollected: _controller.scoreSystem.ballsCollectedThisTurn,
+        gemsEarned: gems,
         onNextLevel: () {
           Navigator.of(context).pop();
           _modalOpen = false;
@@ -114,7 +120,7 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
           await GameStorage.instance.addCoins(coins);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Double Rewards Claimed! +50 Coins 🪙')),
+              const SnackBar(content: Text('Double Rewards Claimed! +250 Coins 🪙')),
             );
             Navigator.of(context).pop();
             _modalOpen = false;
@@ -140,26 +146,15 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
       barrierDismissible: false,
       child: GameOverModal(
         score: _controller.scoreSystem.currentScore,
+        onSaveWithGems: () async {
+          _controller.revive();
+          Navigator.of(context).pop();
+          _modalOpen = false;
+        },
         onRetry: () {
           Navigator.of(context).pop();
           _modalOpen = false;
           _controller.loadLevel(_controller.currentLevel);
-        },
-        onSaveWithGems: () async {
-          final success = await GameStorage.instance.spendCoins(10);
-          if (success) {
-            _controller.pushBricksUp(2);
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-            _modalOpen = false;
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Not enough gems!')),
-              );
-            }
-          }
         },
         onMenu: () {
           Navigator.of(context).pop();
@@ -168,6 +163,51 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
       ),
     );
     _modalOpen = false;
+  }
+
+  void _openPauseModal() {
+    AudioSynthesizer.instance.playUiClick();
+    _controller.state = GameState.paused;
+    _modalOpen = true;
+
+    GlassModal.show(
+      context: context,
+      barrierDismissible: false,
+      child: PauseModal(
+        onResume: () {
+          Navigator.of(context).pop();
+          _modalOpen = false;
+          _controller.state = GameState.playing;
+        },
+        onRestart: () {
+          Navigator.of(context).pop();
+          _modalOpen = false;
+          _controller.loadLevel(_controller.currentLevel);
+        },
+        onSettings: () {
+          Navigator.of(context).pop();
+          _openSettings();
+        },
+        onMenu: () {
+          Navigator.of(context).pop();
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
+  void _openSettings() {
+    GlassModal.show(
+      context: context,
+      title: 'SETTINGS',
+      child: SettingsModal(
+        currentDifficulty: widget.difficulty,
+        onDifficultyChanged: (_) {},
+      ),
+    ).then((_) {
+      _modalOpen = false;
+      _controller.state = GameState.playing;
+    });
   }
 
   @override
@@ -181,28 +221,36 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = GameColors.getBackgroundColor(GameStorage.instance.getDarkThemeIndex());
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color(0xFF090E1D),
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Dedicated Top HUD Header (Pause, Level Chip, Score & Combo)
+            // 1. Top HUD: Pause, Level + Stars, Score, Lives
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
               child: _buildTopHud(),
             ),
 
-            // 2. Clear, Unobstructed Playground Canvas (Starts cleanly AFTER the top HUD)
+            // 2. Playfield Arena with Real-time Paddle
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   _controller.setDimensions(constraints.maxWidth, constraints.maxHeight);
 
                   return GestureDetector(
-                    onPanStart: (details) => _controller.onAimStart(details.localPosition),
-                    onPanUpdate: (details) => _controller.onAimUpdate(details.localPosition),
-                    onPanEnd: (_) => _controller.onAimEnd(),
+                    behavior: HitTestBehavior.opaque,
+                    onPanDown: (details) {
+                      _controller.onPaddleDrag(details.localPosition.dx);
+                    },
+                    onPanUpdate: (details) {
+                      _controller.onPaddleDrag(details.localPosition.dx);
+                    },
+                    onTap: () {
+                      if (_controller.state == GameState.aiming) {
+                        _controller.launchBall();
+                      }
+                    },
                     child: AnimatedBuilder(
                       animation: _ticker,
                       builder: (context, _) {
@@ -211,16 +259,13 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
                           painter: GamePainter(
                             bricks: _controller.bricks,
                             balls: _controller.balls,
-                            trajectory: _controller.currentTrajectory,
-                            launcherPosition: _controller.launcherPosition,
-                            activeBallCount: _controller.balls.where((b) => b.isActive).length,
-                            permanentBallCount: _controller.permanentBalls,
-                            isAiming: _controller.isDraggingAim,
-                            dangerRow: _controller.currentLevel.dangerRow,
+                            paddle: _controller.paddle,
+                            fallingPowerUps: _controller.fallingPowerUps,
                             columns: _controller.currentLevel.columns,
                             rows: _controller.currentLevel.rows,
                             animationProgress: _ticker.value,
                             themeColor: _controller.currentLevel.themeColor,
+                            isAiming: _controller.state == GameState.aiming,
                           ),
                         );
                       },
@@ -230,7 +275,7 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
               ),
             ),
 
-            // 3. Bottom Booster & Controls Dock
+            // 3. Bottom Booster Dock (4 Cards matching mockup)
             Padding(
               padding: const EdgeInsets.fromLTRB(14.0, 4.0, 14.0, 10.0),
               child: _buildBottomBoosterDock(),
@@ -241,148 +286,140 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TOP HUD: Pause Pill, Level + Star Bar, Score, Lives Counter
+  // ═════════════════════════════════════════════════════════════════════════════
   Widget _buildTopHud() {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final score = _controller.scoreSystem.currentScore;
-        final combo = _controller.scoreSystem.comboMultiplier;
+        final levelNum = _controller.currentLevel.levelNumber;
+        final lives = _controller.lives;
+
         return Row(
           children: [
-            // Compact Glass Pause Button (fixed width)
+            // Pause Button (Glass Pill)
             GestureDetector(
-              onTap: () {
-                AudioSynthesizer.instance.playUiClick();
-                _controller.togglePause();
-                GlassModal.show(
-                  context: context,
-                  barrierDismissible: false,
-                  child: PauseModal(
-                    onResume: () {
-                      Navigator.of(context).pop();
-                      _controller.togglePause();
-                    },
-                    onRestart: () {
-                      Navigator.of(context).pop();
-                      _controller.loadLevel(_controller.currentLevel);
-                    },
-                    onSettings: () {
-                      GlassModal.show(
-                        context: context,
-                        title: 'SETTINGS',
-                        child: SettingsModal(
-                          currentDifficulty: _controller.difficulty,
-                          onDifficultyChanged: (d) => _controller.difficulty = d,
-                        ),
-                      );
-                    },
-                    onExit: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                );
-              },
+              onTap: _openPauseModal,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Icon(Icons.pause_rounded, color: Colors.white, size: 20),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // Level Chip — takes all remaining center space
-            Expanded(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: GameColors.neonCyan.withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    'LVL ${_controller.currentLevel.levelNumber}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // Score & Combo Badge — Flexible so it never overflows
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
+                  color: const Color(0xFF131D36),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '$score',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
-                        ),
-                      ),
+                  border: Border.all(
+                    color: const Color(0xFF2A3D66),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
                     ),
-                    if (combo > 1.0) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: GameColors.solarGold.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'x${combo.toStringAsFixed(1)}',
-                          style: const TextStyle(
-                            color: GameColors.solarGold,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (_controller.turnBallsThisTurn > 0) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF39FF14).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '+${_controller.turnBallsThisTurn}',
-                          style: const TextStyle(
-                            color: Color(0xFF39FF14),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
+                child: const Icon(
+                  Icons.pause_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // Level & Stars Info
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF131D36),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF2A3D66),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Level $levelNum',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Row(
+                          children: List.generate(3, (index) {
+                            return const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFFFD700),
+                              size: 14,
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+
+                    // 3 Lives indicator (Heart icons)
+                    Row(
+                      children: List.generate(3, (index) {
+                        final isAlive = index < lives;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                          child: Icon(
+                            Icons.favorite_rounded,
+                            color: isAlive ? const Color(0xFFFF2A6D) : const Color(0xFF3B4866),
+                            size: 16,
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // Score Pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF131D36),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF2A3D66),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'Score',
+                    style: TextStyle(
+                      color: Color(0xFF8E9EB8),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    score.toString(),
+                    style: const TextStyle(
+                      color: Color(0xFF00E5FF),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -391,149 +428,92 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // BOTTOM BOOSTER DOCK: 4 Cards Matching Mockup
+  // ═════════════════════════════════════════════════════════════════════════════
   Widget _buildBottomBoosterDock() {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final isSimulating = _controller.state == GameState.simulating || _controller.state == GameState.firing;
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // Lightning
-              _buildBoosterButton(
-                icon: Icons.bolt_rounded,
-                color: GameColors.neonCyan,
-                badgeCount: _controller.lightningBoosterCount,
-                onTap: () => _controller.useLightningBooster(),
-                enabled: _controller.state == GameState.aiming && _controller.lightningBoosterCount > 0,
-              ),
-
-              // Super Nuke
-              _buildBoosterButton(
-                icon: Icons.crisis_alert_rounded,
-                color: GameColors.neonPurple,
-                badgeCount: _controller.superNukeBoosterCount,
-                onTap: () => _controller.useSuperNukeBooster(),
-                enabled: _controller.state == GameState.aiming && _controller.superNukeBoosterCount > 0,
-              ),
-
-              // Speed (1X, 2X, 3X)
-              GestureDetector(
-                onTap: () {
-                  AudioSynthesizer.instance.playUiClick();
-                  _controller.toggleSpeed();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: GameColors.electricAmber.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: GameColors.electricAmber.withOpacity(0.5)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.fast_forward_rounded, color: GameColors.electricAmber, size: 16),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${_controller.speedMultiplier.toInt()}X',
-                        style: const TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Recall Magnet
-              _buildBoosterButton(
-                icon: Icons.download_rounded,
-                color: GameColors.emeraldGreen,
-                onTap: () => _controller.triggerRecallMagnet(),
-                enabled: isSimulating,
-              ),
-
-              // Sandbox Lab
-              GestureDetector(
-                onTap: () {
-                  AudioSynthesizer.instance.playUiClick();
-                  GlassModal.show(
-                    context: context,
-                    title: 'SANDBOX',
-                    child: SandboxDebugModal(controller: _controller),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: const Icon(Icons.science_rounded, color: Colors.white60, size: 18),
-                ),
-              ),
-            ],
-          ),
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildBoosterItem(
+              icon: Icons.brightness_7_rounded,
+              color: const Color(0xFFFF5252),
+              count: _controller.superNukeBoosterCount,
+              onTap: () => _controller.useSuperNukeBooster(),
+            ),
+            _buildBoosterItem(
+              icon: Icons.bolt_rounded,
+              color: const Color(0xFF00E5FF),
+              count: _controller.lightningBoosterCount,
+              onTap: () => _controller.useLightningBooster(),
+            ),
+            _buildBoosterItem(
+              icon: Icons.grain_rounded,
+              color: const Color(0xFF7C4DFF),
+              count: _controller.triBallBoosterCount,
+              onTap: () => _controller.useTriBallBooster(),
+            ),
+            _buildBoosterItem(
+              icon: Icons.monetization_on_rounded,
+              color: const Color(0xFFFFD700),
+              count: _controller.coinBoosterCount,
+              onTap: () => _controller.useCoinBooster(),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildBoosterButton({
+  Widget _buildBoosterItem({
     required IconData icon,
     required Color color,
+    required int count,
     required VoidCallback onTap,
-    int? badgeCount,
-    bool enabled = true,
   }) {
     return GestureDetector(
-      onTap: enabled
-          ? () {
-              AudioSynthesizer.instance.playUiClick();
-              onTap();
-            }
-          : null,
-      child: Opacity(
-        opacity: enabled ? 1.0 : 0.3,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: enabled ? color.withOpacity(0.18) : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: enabled ? color.withOpacity(0.6) : Colors.white10,
+      onTap: () {
+        AudioSynthesizer.instance.playUiClick();
+        onTap();
+      },
+      child: Container(
+        width: 62,
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0xFF131D36),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.4),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(icon, color: enabled ? color : Colors.white38, size: 20),
-              if (badgeCount != null && badgeCount > 0)
-                Positioned(
-                  top: -5,
-                  right: -7,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      '$badgeCount',
-                      style: const TextStyle(color: Colors.black, fontSize: 7.5, fontWeight: FontWeight.w900),
-                    ),
-                  ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, color: color, size: 24),
+            Positioned(
+              bottom: 3,
+              right: 6,
+              child: Text(
+                'x$count',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );

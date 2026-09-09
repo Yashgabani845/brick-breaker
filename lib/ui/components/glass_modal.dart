@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
-import 'glass_card.dart';
 
-/// Modal dialog styled with clean elevated dark surface
+/// Modal dialog styled with clean elevated Brick Smash dark surface
 class GlassModal extends StatelessWidget {
   final Widget child;
   final String? title;
@@ -14,7 +13,7 @@ class GlassModal extends StatelessWidget {
     required this.child,
     this.title,
     this.onClose,
-    this.maxWidth = 420.0,
+    this.maxWidth = 400.0,
   });
 
   static Future<T?> show<T>({
@@ -26,7 +25,7 @@ class GlassModal extends StatelessWidget {
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      barrierColor: Colors.black.withOpacity(0.80),
+      barrierColor: Colors.black.withOpacity(0.75),
       builder: (ctx) => GlassModal(
         title: title,
         onClose: () => Navigator.of(ctx).pop(),
@@ -43,12 +42,21 @@ class GlassModal extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: GlassCard(
-              surfaceColor: GameColors.surfaceCard,
-              borderColor: GameColors.glassBorder,
-              borderRadius: 20,
-              padding: const EdgeInsets.all(22.0),
+            padding: const EdgeInsets.symmetric(horizontal: 18.0),
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D162B),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFF263868), width: 1.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -67,13 +75,13 @@ class GlassModal extends StatelessWidget {
                         ),
                         if (onClose != null)
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 22),
                             onPressed: onClose,
                             visualDensity: VisualDensity.compact,
                           ),
                       ],
                     ),
-                    const Divider(color: Colors.white12, height: 20),
+                    const SizedBox(height: 12),
                   ],
                   child,
                 ],

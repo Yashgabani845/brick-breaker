@@ -247,11 +247,9 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
       builder: (context, _) {
         final score = _controller.scoreSystem.currentScore;
         final combo = _controller.scoreSystem.comboMultiplier;
-
         return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Compact Glass Pause Button
+            // Compact Glass Pause Button (fixed width)
             GestureDetector(
               onTap: () {
                 AudioSynthesizer.instance.playUiClick();
@@ -296,81 +294,95 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
               ),
             ),
 
-            // Minimalist Level Chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.45),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: GameColors.neonCyan.withOpacity(0.5)),
-              ),
-              child: Text(
-                'LVL ${_controller.currentLevel.levelNumber}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 14,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ),
+            const SizedBox(width: 8),
 
-            // Score & Combo Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.45),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$score',
+            // Level Chip — takes all remaining center space
+            Expanded(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: GameColors.neonCyan.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    'LVL ${_controller.currentLevel.levelNumber}',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
                       fontSize: 14,
+                      letterSpacing: 1.0,
                     ),
                   ),
-                  if (combo > 1.0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: GameColors.solarGold.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Score & Combo Badge — Flexible so it never overflows
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
                       child: Text(
-                        'x${combo.toStringAsFixed(1)}',
+                        '$score',
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: GameColors.solarGold,
+                          color: Colors.white,
                           fontWeight: FontWeight.w900,
-                          fontSize: 9,
+                          fontSize: 13,
                         ),
                       ),
                     ),
-                  ],
-                  if (_controller.turnBallsThisTurn > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF39FF14).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '+${_controller.turnBallsThisTurn}⚪',
-                        style: const TextStyle(
-                          color: Color(0xFF39FF14),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 9,
+                    if (combo > 1.0) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: GameColors.solarGold.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'x${combo.toStringAsFixed(1)}',
+                          style: const TextStyle(
+                            color: GameColors.solarGold,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 9,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
+                    if (_controller.turnBallsThisTurn > 0) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF39FF14).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '+${_controller.turnBallsThisTurn}',
+                          style: const TextStyle(
+                            color: Color(0xFF39FF14),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

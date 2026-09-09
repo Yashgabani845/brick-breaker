@@ -10,7 +10,6 @@ import '../../storage/game_storage.dart';
 import '../components/glass_button.dart';
 import '../components/glass_modal.dart';
 import '../components/swarm_3d_sphere.dart';
-import '../modals/sandbox_debug_modal.dart';
 import '../modals/settings_modal.dart';
 import 'daily_challenge_screen.dart';
 import 'gameplay_screen.dart';
@@ -146,20 +145,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const DailyChallengeScreen()),
     ).then((_) => _loadSaveData());
-  }
-
-  void _openSandbox() {
-    AudioSynthesizer.instance.playUiClick();
-    GlassModal.show(
-      context: context,
-      title: 'LEVEL SELECTOR',
-      child: SandboxDebugModal(
-        onLoadLevel: (lvl) {
-          Navigator.of(context).pop();
-          _startLevel(lvl);
-        },
-      ),
-    );
   }
 
   @override
@@ -671,67 +656,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   // ═════════════════════════════════════════════════════════════════════════════
-  // 5. 2x2 BENTO MODES GRID (Campaign Map, Daily Quest, Armory, Sandbox)
+  // 5. MODES GRID (Campaign Map & Daily Quest)
   // ═════════════════════════════════════════════════════════════════════════════
   Widget _buildBentoModesGrid() {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            // Sector Campaign Map Tile
-            Expanded(
-              child: _buildBentoTile(
-                title: 'SECTOR MAP',
-                subtitle: '1,000 Levels',
-                icon: Icons.map_rounded,
-                accentColor: GameColors.neonCyan,
-                badgeText: 'CAMPAIGN',
-                onTap: _openLevelMap,
-              ),
-            ),
-            const SizedBox(width: 10),
-
-            // Daily Quests Tile
-            Expanded(
-              child: _buildBentoTile(
-                title: 'DAILY QUEST',
-                subtitle: 'Streak & Coins 🔥',
-                icon: Icons.local_fire_department_rounded,
-                accentColor: GameColors.electricAmber,
-                badgeText: 'REWARDS',
-                onTap: _openDailyQuests,
-              ),
-            ),
-          ],
+        // Sector Campaign Map Tile
+        Expanded(
+          child: _buildBentoTile(
+            title: 'SECTOR MAP',
+            subtitle: '1,000 Levels',
+            icon: Icons.map_rounded,
+            accentColor: GameColors.neonCyan,
+            badgeText: 'CAMPAIGN',
+            onTap: _openLevelMap,
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            // Armory & Skins Tile
-            Expanded(
-              child: _buildBentoTile(
-                title: 'ARMORY',
-                subtitle: 'Ball Skins & Trail',
-                icon: Icons.palette_rounded,
-                accentColor: GameColors.neonPurple,
-                badgeText: 'CUSTOMIZE',
-                onTap: _openWardrobe,
-              ),
-            ),
-            const SizedBox(width: 10),
+        const SizedBox(width: 10),
 
-            // Sandbox / Level Selector Tile
-            Expanded(
-              child: _buildBentoTile(
-                title: 'SANDBOX',
-                subtitle: 'Level Tester',
-                icon: Icons.science_rounded,
-                accentColor: GameColors.emeraldGreen,
-                badgeText: 'DEBUG',
-                onTap: _openSandbox,
-              ),
-            ),
-          ],
+        // Daily Quests Tile
+        Expanded(
+          child: _buildBentoTile(
+            title: 'DAILY QUEST',
+            subtitle: 'Streak & Coins 🔥',
+            icon: Icons.local_fire_department_rounded,
+            accentColor: GameColors.electricAmber,
+            badgeText: 'REWARDS',
+            onTap: _openDailyQuests,
+          ),
         ),
       ],
     );

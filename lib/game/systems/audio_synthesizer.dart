@@ -16,7 +16,7 @@ class AudioSynthesizer {
   bool isMuted = false;
   double masterVolume = 0.85;
 
-  static const int _poolSize = 10;
+  static const int _poolSize = 16;  // larger pool so hits never stomp each other
   final List<AudioPlayer> _playerPool = [];
   int _nextPlayerIndex = 0;
   int _lastVoiceTimeMs = 0;
@@ -26,10 +26,12 @@ class AudioSynthesizer {
       for (int i = 0; i < _poolSize; i++) {
         final player = AudioPlayer();
         player.setReleaseMode(ReleaseMode.stop);
+        // Low-latency mode on Android
+        player.setPlayerMode(PlayerMode.lowLatency);
         _playerPool.add(player);
       }
     } catch (e) {
-      debugPrint('AudioPool initialization note: $e');
+      debugPrint('AudioPool init: $e');
     }
   }
 
@@ -38,35 +40,37 @@ class AudioSynthesizer {
     isMuted = !isMuted;
   }
 
-  Future<void> _playWav(String assetPath, {double volume = 0.85}) async {
+  /// Fire-and-forget: grab next player slot and play immediately without awaiting.
+  /// Stopping then re-playing on the same player is the fastest path on Android.
+  void _playWav(String assetPath, {double volume = 0.85}) {
     if (isMuted) return;
     try {
       if (_playerPool.isNotEmpty) {
         final player = _playerPool[_nextPlayerIndex];
         _nextPlayerIndex = (_nextPlayerIndex + 1) % _playerPool.length;
-        await player.stop();
-        await player.setVolume((volume * masterVolume).clamp(0.0, 1.0));
-        await player.play(AssetSource(assetPath));
+        // Fire-and-forget: do NOT await — prevents frame stalls
+        player.stop().whenComplete(() {
+          player.setVolume((volume * masterVolume).clamp(0.0, 1.0));
+          player.play(AssetSource(assetPath));
+        });
       }
     } catch (_) {
-      // Fallback to web/platform invocation
       invokeWebAudioEngine('playAsset', [assetPath]);
     }
   }
 
-  /// Plays a pentatonic chime based on combo streak / hit count (C5 to E6)
+  /// Plays a pentatonic chime on brick hit. Rate-limited to 30ms to prevent
+  /// audio overload during high-density swarm volleys.
   void playBrickHitChime(int combo) {
     if (isMuted) return;
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - _lastVoiceTimeMs < 18) {
-      return; // Rate limit 18ms to avoid audio distortion on high swarm hits
-    }
+    if (now - _lastVoiceTimeMs < 30) return; // 30ms debounce
     _lastVoiceTimeMs = now;
 
     // Harmonic pentatonic pitch mapping (1 to 8)
     final chimeIndex = ((combo - 1) % 8) + 1;
-    _playWav('audio/hit_chime_$chimeIndex.wav', volume: 0.75);
+    _playWav('audio/hit_chime_$chimeIndex.wav', volume: 0.70);
 
     try {
       HapticFeedback.selectionClick();

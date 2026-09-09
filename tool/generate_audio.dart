@@ -10,10 +10,11 @@ void main() {
   }
 
   // 1. Generate 8 Pentatonic Hit Chimes (C5, D5, E5, G5, A5, C6, D6, E6)
+  //    Duration: 60ms — crisp tap-on-glass percussion feel
   final pentatonicFreqs = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
   for (int i = 0; i < pentatonicFreqs.length; i++) {
     final freq = pentatonicFreqs[i];
-    final samples = _generateBellChime(freq, durationSec: 0.18);
+    final samples = _generateBellChime(freq, durationSec: 0.06);
     _writeWavFile(File('assets/audio/hit_chime_${i + 1}.wav'), samples);
   }
 

@@ -352,60 +352,81 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
       builder: (context, _) {
         final isSimulating = _controller.state == GameState.simulating || _controller.state == GameState.firing;
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // Lightning Booster
-            _buildBoosterButton(
-              icon: Icons.bolt_rounded,
-              color: GameColors.neonCyan,
-              label: 'LIGHTNING',
-              badgeCount: _controller.lightningBoosterCount,
-              onTap: () => _controller.useLightningBooster(),
-              enabled: _controller.state == GameState.aiming && _controller.lightningBoosterCount > 0,
-            ),
+        return GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          borderRadius: 18,
+          surfaceColor: Colors.black.withOpacity(0.65),
+          borderColor: Colors.white.withOpacity(0.18),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Lightning Booster
+              _buildBoosterButton(
+                icon: Icons.bolt_rounded,
+                color: GameColors.neonCyan,
+                label: 'LIGHTNING',
+                badgeCount: _controller.lightningBoosterCount,
+                onTap: () => _controller.useLightningBooster(),
+                enabled: _controller.state == GameState.aiming && _controller.lightningBoosterCount > 0,
+              ),
 
-            // Super Nuke Booster
-            _buildBoosterButton(
-              icon: Icons.crisis_alert_rounded,
-              color: GameColors.neonPurple,
-              label: 'SUPER NUKE',
-              badgeCount: _controller.superNukeBoosterCount,
-              onTap: () => _controller.useSuperNukeBooster(),
-              enabled: _controller.state == GameState.aiming && _controller.superNukeBoosterCount > 0,
-            ),
+              // Super Nuke Booster
+              _buildBoosterButton(
+                icon: Icons.crisis_alert_rounded,
+                color: GameColors.neonPurple,
+                label: 'NUKE',
+                badgeCount: _controller.superNukeBoosterCount,
+                onTap: () => _controller.useSuperNukeBooster(),
+                enabled: _controller.state == GameState.aiming && _controller.superNukeBoosterCount > 0,
+              ),
 
-            // Speed Multiplier (1x, 2x, 3x)
-            _buildBoosterButton(
-              icon: Icons.fast_forward_rounded,
-              color: GameColors.electricAmber,
-              label: '${_controller.speedMultiplier.toInt()}X SPEED',
-              onTap: () => _controller.toggleSpeed(),
-              enabled: true,
-            ),
+              // Speed Multiplier (1x, 2x, 3x)
+              _buildBoosterButton(
+                icon: Icons.fast_forward_rounded,
+                color: GameColors.electricAmber,
+                label: '${_controller.speedMultiplier.toInt()}X',
+                onTap: () => _controller.toggleSpeed(),
+                enabled: true,
+              ),
 
-            // Instant Recall Magnet
-            _buildBoosterButton(
-              icon: Icons.download_rounded,
-              color: GameColors.emeraldGreen,
-              label: 'RECALL',
-              onTap: () => _controller.triggerRecallMagnet(),
-              enabled: isSimulating,
-            ),
+              // Instant Recall Magnet
+              _buildBoosterButton(
+                icon: Icons.download_rounded,
+                color: GameColors.emeraldGreen,
+                label: 'RECALL',
+                onTap: () => _controller.triggerRecallMagnet(),
+                enabled: isSimulating,
+              ),
 
-            // Sandbox / Physics Lab
-            IconButton(
-              icon: const Icon(Icons.science_rounded, color: Colors.white54, size: 24),
-              tooltip: 'Physics Sandbox',
-              onPressed: () {
-                GlassModal.show(
-                  context: context,
-                  title: 'SANDBOX LAB',
-                  child: SandboxDebugModal(controller: _controller),
-                );
-              },
-            ),
-          ],
+              // Sandbox / Physics Lab
+              GestureDetector(
+                onTap: () {
+                  AudioSynthesizer.instance.playUiClick();
+                  GlassModal.show(
+                    context: context,
+                    title: 'SANDBOX LAB',
+                    child: SandboxDebugModal(controller: _controller),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.science_rounded, color: Colors.white70, size: 18),
+                      SizedBox(height: 2),
+                      Text('LAB', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -427,23 +448,28 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
             }
           : null,
       child: Opacity(
-        opacity: enabled ? 1.0 : 0.4,
-        child: GlassCard(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          borderRadius: 14,
-          glow: enabled,
-          glowColor: color,
+        opacity: enabled ? 1.0 : 0.35,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: enabled ? color.withOpacity(0.16) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: enabled ? color.withOpacity(0.6) : Colors.white10,
+              width: 1.0,
+            ),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(icon, color: color, size: 22),
-                  if (badgeCount != null)
+                  Icon(icon, color: enabled ? color : Colors.white38, size: 20),
+                  if (badgeCount != null && badgeCount > 0)
                     Positioned(
-                      top: -6,
-                      right: -8,
+                      top: -4,
+                      right: -7,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
@@ -452,16 +478,16 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
                         ),
                         child: Text(
                           '$badgeCount',
-                          style: const TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.w900),
+                          style: const TextStyle(color: Colors.black, fontSize: 7.5, fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 label,
-                style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900),
+                style: TextStyle(color: enabled ? color : Colors.white38, fontSize: 8.5, fontWeight: FontWeight.w900),
               ),
             ],
           ),

@@ -77,9 +77,10 @@ class GameController extends ChangeNotifier {
 
   void setDimensions(double width, double height) {
     playfieldWidth = width;
-    playfieldHeight = height;
+    // Dedicated playfield height - reserves bottom 18% for the controls dock
+    playfieldHeight = height * 0.81;
     cellWidth = width / currentLevel.columns;
-    cellHeight = (height * 0.78) / currentLevel.rows;
+    cellHeight = (playfieldHeight * 0.74) / currentLevel.rows;
 
     physicsEngine = PhysicsEngine(
       columns: currentLevel.columns,
@@ -89,7 +90,7 @@ class GameController extends ChangeNotifier {
     );
 
     if (state == GameState.aiming) {
-      launcherPosition.set(playfieldWidth / 2, height * 0.88);
+      launcherPosition.set(playfieldWidth / 2, playfieldHeight - 12.0);
     }
     notifyListeners();
   }
@@ -114,7 +115,8 @@ class GameController extends ChangeNotifier {
     firstLandedPosition = null;
     turnsPlayed = 0;
 
-    launcherPosition.set(playfieldWidth / 2, playfieldHeight * 0.88);
+    final defaultY = playfieldHeight > 0 ? (playfieldHeight - 12.0) : 550.0;
+    launcherPosition.set(playfieldWidth > 0 ? (playfieldWidth / 2) : 200.0, defaultY);
     _updateTrajectory();
     notifyListeners();
   }

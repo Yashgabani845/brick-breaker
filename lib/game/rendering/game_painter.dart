@@ -10,6 +10,7 @@ import '../physics/trajectory_predictor.dart';
 import 'brick_3d_renderer.dart';
 
 /// Master 3D & Particle CustomPainter for Bricks Breaker 3D
+/// Renders high-tech danger laser barrier, crisp grid, glowing ball swarms, and launch platform.
 class GamePainter extends CustomPainter {
   final List<Brick> bricks;
   final List<Ball> balls;
@@ -42,35 +43,37 @@ class GamePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cellWidth = size.width / columns;
-    final cellHeight = (size.height * 0.78) / rows;
+    final cellHeight = (launcherPosition.y * 0.74) / rows;
 
     // 1. Render Deep OLED Cosmic Background & Grid
     _renderBackground(canvas, size, cellWidth, cellHeight);
 
-    // 2. Render Danger Line (Threshold row)
+    // 2. Render Floor / Recovery Baseline
+    _renderFloorBaseline(canvas, size);
+
+    // 3. Render High-Tech Laser Danger Barrier (Threshold row)
     _renderDangerLine(canvas, size, cellHeight);
 
-    // 3. Render 3D Extruded Bricks & Wedges
+    // 4. Render 3D Extruded Bricks & Wedges
     _renderBricks(canvas, cellWidth, cellHeight);
 
-    // 4. Render Aim Trajectory (if player is aiming)
+    // 5. Render Aim Trajectory (if player is aiming)
     if (isAiming && trajectory != null && trajectory!.isNotEmpty) {
       _renderTrajectory(canvas, trajectory!);
     }
 
-    // 5. Render Glowing Ball Swarms & Additive Trails
+    // 6. Render Glowing Ball Swarms & Additive Trails
     _renderBalls(canvas);
 
-    // 6. Render Dynamic Particle Systems (Shards, Shockwaves, Lasers, Popups)
+    // 7. Render Dynamic Particle Systems (Shards, Shockwaves, Lasers, Popups)
     _renderParticles(canvas);
 
-    // 7. Render Launcher Base & Power Indicator
+    // 8. Render Launcher Base & Power Indicator
     _renderLauncher(canvas, size);
   }
 
   void _renderBackground(Canvas canvas, Size size, double cw, double ch) {
     final theme = themeColor ?? GameColors.neonCyan;
-    // Deep OLED Space Gradient with level atmospheric tint
     final bgPaint = Paint()
       ..shader = RadialGradient(
         center: const Alignment(0.0, -0.35),
@@ -82,53 +85,121 @@ class GamePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    // Subtle Sci-Fi Grid Lines
+    // Subtle Sci-Fi Grid Lines within playfield
     final gridPaint = Paint()
       ..color = Colors.white.withOpacity(0.025)
       ..strokeWidth = 1.0;
 
     for (int c = 0; c <= columns; c++) {
-      canvas.drawLine(Offset(c * cw, 0), Offset(c * cw, size.height), gridPaint);
+      canvas.drawLine(Offset(c * cw, 0), Offset(c * cw, launcherPosition.y), gridPaint);
     }
     for (int r = 0; r <= rows; r++) {
-      canvas.drawLine(Offset(0, r * ch), Offset(size.width, r * ch), gridPaint);
+      final y = r * ch;
+      if (y <= launcherPosition.y) {
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      }
     }
+  }
+
+  void _renderFloorBaseline(Canvas canvas, Size size) {
+    final floorY = launcherPosition.y + 12.0;
+
+    // Floor Guideline Glow
+    final floorGlow = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          Colors.transparent,
+          GameColors.neonCyan.withOpacity(0.35),
+          GameColors.neonCyan.withOpacity(0.35),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.2, 0.8, 1.0],
+      ).createShader(Rect.fromLTWH(0, floorY - 1, size.width, 2))
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, floorY), Offset(size.width, floorY), floorGlow);
   }
 
   void _renderDangerLine(Canvas canvas, Size size, double ch) {
     final dangerY = dangerRow * ch;
-    final pulse = 0.4 + 0.4 * math.sin(animationProgress * math.pi * 2);
+    final pulse = 0.5 + 0.5 * math.sin(animationProgress * math.pi * 2);
 
-    final linePaint = Paint()
-      ..color = GameColors.crimsonDanger.withOpacity(pulse)
+    // 1. Ambient Warning Hazard Area Glow
+    final alertGradient = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          GameColors.crimsonDanger.withOpacity(0.0),
+          GameColors.crimsonDanger.withOpacity(0.12 * pulse),
+        ],
+      ).createShader(Rect.fromLTWH(0, dangerY - 24, size.width, 24));
+    canvas.drawRect(Rect.fromLTWH(0, dangerY - 24, size.width, 24), alertGradient);
+
+    // 2. High-Tech Laser Conduit Line (Glowing center + outer bloom)
+    final bloomPaint = Paint()
+      ..color = GameColors.crimsonDanger.withOpacity(0.4 * pulse)
+      ..strokeWidth = 6.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, dangerY), Offset(size.width, dangerY), bloomPaint);
+
+    final coreLaserPaint = Paint()
+      ..color = Color.lerp(GameColors.crimsonDanger, Colors.white, 0.4)!
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, dangerY), Offset(size.width, dangerY), coreLaserPaint);
+
+    // 3. Moving Diagonal Caution Hazard Stripes
+    final stripePaint = Paint()
+      ..color = GameColors.electricAmber.withOpacity(0.75 * pulse)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    // Dashed Hazard Line
-    const dashWidth = 8.0;
-    const dashSpace = 6.0;
-    double startX = 0.0;
-    while (startX < size.width) {
+    final offsetProgress = (animationProgress * 20.0);
+    for (double x = -20.0 + offsetProgress; x < size.width + 20.0; x += 18.0) {
       canvas.drawLine(
-        Offset(startX, dangerY),
-        Offset(startX + dashWidth, dangerY),
-        linePaint,
+        Offset(x, dangerY + 4),
+        Offset(x + 8, dangerY - 4),
+        stripePaint,
       );
-      startX += dashWidth + dashSpace;
     }
 
-    // "DANGER" glowing tag at edge
+    // 4. Luminous Danger Badge Pill (Top Right)
+    final badgeWidth = 100.0;
+    final badgeHeight = 18.0;
+    final badgeRect = Rect.fromLTWH(size.width - badgeWidth - 8, dangerY - badgeHeight - 4, badgeWidth, badgeHeight);
+
+    final badgeBgPaint = Paint()
+      ..color = Colors.black.withOpacity(0.75)
+      ..style = PaintingStyle.fill;
+    final badgeBorderPaint = Paint()
+      ..color = GameColors.crimsonDanger.withOpacity(0.85)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(badgeRect, const Radius.circular(6.0));
+    canvas.drawRRect(rrect, badgeBgPaint);
+    canvas.drawRRect(rrect, badgeBorderPaint);
+
+    // Flashing Warning Dot
+    final beaconPaint = Paint()
+      ..color = GameColors.crimsonDanger.withOpacity(pulse)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(badgeRect.left + 10, badgeRect.center.dy), 3.5, beaconPaint);
+
     final textSpan = TextSpan(
-      text: '⚠️ DANGER LINE',
+      text: 'DANGER LINE',
       style: TextStyle(
-        color: GameColors.crimsonDanger.withOpacity(pulse),
-        fontSize: 9.0,
+        color: Colors.white.withOpacity(0.95),
+        fontSize: 8.5,
         fontWeight: FontWeight.w900,
-        letterSpacing: 1.5,
+        fontFamily: 'Roboto',
+        letterSpacing: 1.2,
       ),
     );
     final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-    tp.paint(canvas, Offset(size.width - tp.width - 8, dangerY - tp.height - 2));
+    tp.paint(canvas, Offset(badgeRect.left + 18, badgeRect.center.dy - tp.height / 2));
   }
 
   void _renderBricks(Canvas canvas, double cw, double ch) {
@@ -155,146 +226,122 @@ class GamePainter extends CustomPainter {
     }
   }
 
-  void _renderTrajectory(Canvas canvas, List<TrajectoryPoint> path) {
-    final linePaint = Paint()
-      ..color = GameColors.neonCyan.withOpacity(0.85)
+  void _renderTrajectory(Canvas canvas, List<TrajectoryPoint> points) {
+    if (points.isEmpty) return;
+
+    final dotPaint = Paint()
+      ..color = GameColors.neonCyan
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final dotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    for (int i = 0; i < points.length; i++) {
+      final p = points[i];
+      final alpha = (1.0 - (i / points.length)).clamp(0.2, 1.0);
+      dotPaint.color = GameColors.neonCyan.withOpacity(alpha);
 
-    for (int i = 0; i < path.length; i++) {
-      final seg = path[i];
-      final p1 = Offset(seg.start.x, seg.start.y);
-      final p2 = Offset(seg.end.x, seg.end.y);
+      // Draw dashed trajectory raycast segment
+      final start = Offset(p.start.x, p.start.y);
+      final end = Offset(p.end.x, p.end.y);
+      canvas.drawLine(start, end, dotPaint);
 
-      // Draw dashed trajectory segment
-      final dist = (p2 - p1).distance;
-      if (dist > 1.0) {
-        final dir = (p2 - p1) / dist;
-        const step = 14.0;
-        double cur = (animationProgress * step) % step;
-
-        while (cur < dist) {
-          final dotPos = p1 + dir * cur;
-          canvas.drawCircle(dotPos, 2.2, dotPaint);
-          cur += step;
-        }
-      }
-
-      // Draw landing impact reticle if hitting obstacle
-      if (i == path.length - 1 || seg.hitBrick != null) {
-        final reticlePaint = Paint()
-          ..color = (seg.hitBrick?.type.isSpecialTrigger == true)
-              ? GameColors.electricAmber
-              : GameColors.neonCyan
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8;
-        canvas.drawCircle(p2, 6.0, reticlePaint);
-        canvas.drawCircle(p2, 2.0, dotPaint);
-      }
+      // Pulsing indicator at end/bounce point
+      final pulseSize = 3.5 + 1.0 * math.sin(animationProgress * math.pi * 4);
+      final endPaint = Paint()
+        ..color = (p.hitBrick != null) ? GameColors.solarGold : GameColors.neonCyan
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(end, pulseSize, endPaint);
     }
   }
 
   void _renderBalls(Canvas canvas) {
-    final ballPaint = Paint()..style = PaintingStyle.fill;
     final glowPaint = Paint()..style = PaintingStyle.fill;
+    final corePaint = Paint()..style = PaintingStyle.fill;
 
     for (int i = 0; i < balls.length; i++) {
       final ball = balls[i];
       if (!ball.isActive) continue;
 
-      final center = Offset(ball.position.x, ball.position.y);
-      final skinColor = ball.skin.glowColor;
+      final bx = ball.position.x;
+      final by = ball.position.y;
+      final glowColor = ball.skin.glowColor;
 
-      // 1. Motion Trail (Additive glow fading backward)
+      // 1. Additive Glowing Motion Trails
       for (int t = 0; t < ball.trail.length; t++) {
-        final tPos = ball.trail[t];
-        final alpha = (t + 1) / (ball.trail.length + 1) * 0.35;
-        final tPaint = Paint()
-          ..color = skinColor.withOpacity(alpha)
-          ..style = PaintingStyle.fill;
-        final tRadius = ball.radius * (0.4 + (t / ball.trail.length) * 0.6);
-        canvas.drawCircle(Offset(tPos.x, tPos.y), tRadius, tPaint);
+        final trailPos = ball.trail[t];
+        final trailAlpha = (t / ball.trail.length) * 0.35;
+        final trailRadius = ball.radius * (0.4 + (t / ball.trail.length) * 0.5);
+
+        glowPaint.color = glowColor.withOpacity(trailAlpha);
+        canvas.drawCircle(Offset(trailPos.x, trailPos.y), trailRadius, glowPaint);
       }
 
-      // 2. Outer Radial Glow
-      glowPaint.shader = RadialGradient(
-        colors: [skinColor.withOpacity(0.6), skinColor.withOpacity(0.0)],
-      ).createShader(Rect.fromCircle(center: center, radius: ball.radius * 2.2));
-      canvas.drawCircle(center, ball.radius * 2.2, glowPaint);
+      // 2. Ball Ambient Outer Glow Bloom
+      glowPaint.color = glowColor.withOpacity(0.45);
+      canvas.drawCircle(Offset(bx, by), ball.radius * 1.8, glowPaint);
 
-      // 3. Core Sphere with Specular Highlight
-      ballPaint.shader = RadialGradient(
-        center: const Alignment(-0.35, -0.35),
-        radius: 0.8,
-        colors: [Colors.white, skinColor, Color.lerp(skinColor, Colors.black, 0.4)!],
-      ).createShader(Rect.fromCircle(center: center, radius: ball.radius));
-      canvas.drawCircle(center, ball.radius, ballPaint);
+      // 3. Solid Sphere Core
+      corePaint.color = Colors.white;
+      canvas.drawCircle(Offset(bx, by), ball.radius, corePaint);
+
+      // 4. 3D Specular Highlight Dot
+      final shinePaint = Paint()..color = Colors.white.withOpacity(0.85);
+      canvas.drawCircle(Offset(bx - ball.radius * 0.3, by - ball.radius * 0.3), ball.radius * 0.32, shinePaint);
     }
   }
 
   void _renderParticles(Canvas canvas) {
     final particles = ParticlePool.activeParticles;
-
     for (int i = 0; i < particles.length; i++) {
       final p = particles[i];
-      final alpha = p.alpha;
       final pos = Offset(p.position.x, p.position.y);
+      final alpha = p.alpha.clamp(0.0, 1.0);
 
       switch (p.type) {
-        case ParticleType.shard:
-          canvas.save();
-          canvas.translate(pos.dx, pos.dy);
-          canvas.rotate(p.rotation);
-          final shardPaint = Paint()
-            ..color = p.color.withOpacity(alpha)
-            ..style = PaintingStyle.fill;
-          canvas.drawRect(
-            Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 1.5),
-            shardPaint,
-          );
-          canvas.restore();
-          break;
-
         case ParticleType.spark:
           final sparkPaint = Paint()
             ..color = p.color.withOpacity(alpha)
             ..style = PaintingStyle.fill;
-          canvas.drawCircle(pos, p.size * alpha, sparkPaint);
+          canvas.drawCircle(pos, p.size, sparkPaint);
+          break;
+
+        case ParticleType.shard:
+          final shardPaint = Paint()
+            ..color = p.color.withOpacity(alpha)
+            ..style = PaintingStyle.fill;
+          canvas.save();
+          canvas.translate(pos.dx, pos.dy);
+          canvas.rotate(p.rotation);
+          final shardPath = Path()
+            ..moveTo(0, -p.size)
+            ..lineTo(p.size * 0.6, p.size * 0.8)
+            ..lineTo(-p.size * 0.6, p.size * 0.8)
+            ..close();
+          canvas.drawPath(shardPath, shardPaint);
+          canvas.restore();
           break;
 
         case ParticleType.shockwave:
           final shockPaint = Paint()
             ..color = p.color.withOpacity(alpha)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 3.0 * alpha;
+            ..strokeWidth = 2.5;
           canvas.drawCircle(pos, p.size, shockPaint);
           break;
 
         case ParticleType.laserBeam:
           if (p.lineStart != null && p.lineEnd != null) {
-            final beamGlow = Paint()
-              ..color = p.color.withOpacity(alpha * 0.4)
-              ..strokeWidth = 10.0 * alpha
+            final beamPaint = Paint()
+              ..color = p.color.withOpacity(alpha)
+              ..strokeWidth = p.size
               ..style = PaintingStyle.stroke;
-            final beamCore = Paint()
-              ..color = Colors.white.withOpacity(alpha)
-              ..strokeWidth = 3.5 * alpha
-              ..style = PaintingStyle.stroke;
-            final start = Offset(p.lineStart!.x, p.lineStart!.y);
-            final end = Offset(p.lineEnd!.x, p.lineEnd!.y);
-            canvas.drawLine(start, end, beamGlow);
-            canvas.drawLine(start, end, beamCore);
+            canvas.drawLine(Offset(p.lineStart!.x, p.lineStart!.y), Offset(p.lineEnd!.x, p.lineEnd!.y), beamPaint);
           }
           break;
 
         case ParticleType.textPopup:
           if (p.text != null) {
             final textSpan = TextSpan(
-              text: p.text!,
+              text: p.text,
               style: TextStyle(
                 color: p.color.withOpacity(alpha),
                 fontSize: p.size,
@@ -316,37 +363,54 @@ class GamePainter extends CustomPainter {
     final lx = launcherPosition.x;
     final ly = launcherPosition.y;
 
-    // Launch Cannon Platform
+    // Launch Cannon Platform Base
     final basePaint = Paint()
-      ..color = GameColors.neonCyan.withOpacity(0.3)
+      ..color = GameColors.neonCyan.withOpacity(0.25)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(lx, ly), 14.0, basePaint);
+    canvas.drawCircle(Offset(lx, ly), 13.0, basePaint);
 
     final ringPaint = Paint()
       ..color = GameColors.neonCyan
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawCircle(Offset(lx, ly), 14.0, ringPaint);
+    canvas.drawCircle(Offset(lx, ly), 13.0, ringPaint);
 
     final corePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(lx, ly), 5.0, corePaint);
+    canvas.drawCircle(Offset(lx, ly), 4.5, corePaint);
 
-    // Permanent Ball count badge below launcher
+    // Ball Count Pill Badge (rendered ABOVE launcher cannon so it's always clearly visible)
     if (!isAiming || activeBallCount > 0) {
       final countStr = (activeBallCount > 0) ? 'x$activeBallCount' : 'x$permanentBallCount';
+      final badgeBg = Paint()
+        ..color = Colors.black.withOpacity(0.7)
+        ..style = PaintingStyle.fill;
+      final badgeBorder = Paint()
+        ..color = GameColors.neonCyan.withOpacity(0.6)
+        ..strokeWidth = 1.0
+        ..style = PaintingStyle.stroke;
+
       final textSpan = TextSpan(
         text: countStr,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 12.0,
+          fontSize: 11.0,
           fontWeight: FontWeight.w900,
           fontFamily: 'Roboto',
         ),
       );
       final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-      tp.paint(canvas, Offset(lx - tp.width / 2, ly + 18));
+      final pillRect = Rect.fromCenter(
+        center: Offset(lx, ly - 20),
+        width: tp.width + 12,
+        height: tp.height + 6,
+      );
+
+      final rrect = RRect.fromRectAndRadius(pillRect, const Radius.circular(10.0));
+      canvas.drawRRect(rrect, badgeBg);
+      canvas.drawRRect(rrect, badgeBorder);
+      tp.paint(canvas, Offset(lx - tp.width / 2, ly - 20 - tp.height / 2));
     }
   }
 

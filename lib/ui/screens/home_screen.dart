@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(width: 14),
 
-                // Game Title & Badge
+                // Game Title
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,34 +371,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: GameColors.neonLime.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: GameColors.neonLime.withOpacity(0.5)),
-                            ),
-                            child: const Text(
-                              '1000 LEVELS',
-                              style: TextStyle(color: GameColors.neonLime, fontSize: 9, fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: GameColors.neonPurple.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: GameColors.neonPurple.withOpacity(0.5)),
-                            ),
-                            child: const Text(
-                              '3D PHYSICS',
-                              style: TextStyle(color: GameColors.neonPurple, fontSize: 9, fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '1,000 CYBER LEVELS',
+                        style: TextStyle(
+                          color: GameColors.neonCyan.withOpacity(0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                     ],
                   ),
@@ -415,8 +395,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return GlassCard(
       glow: true,
       glowColor: _currentSkin.glowColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      borderRadius: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: 22,
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SkinsWardrobeScreen()),
@@ -426,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           // 3D Swarm Canvas
           SizedBox(
-            height: 130,
+            height: 120,
             child: Center(
               child: Swarm3dSphere(
                 ballCount: _permanentBalls,
@@ -439,53 +419,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           // Swarm Count & Skin Name
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '$_permanentBalls BALL SWARM',
+                '$_permanentBalls BALLS',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 1.1,
+                  letterSpacing: 1.0,
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: _currentSkin.glowColor.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: _currentSkin.glowColor.withOpacity(0.6)),
                 ),
                 child: Text(
                   _currentSkin.displayName.toUpperCase(),
                   style: TextStyle(
                     color: _currentSkin.glowColor,
-                    fontSize: 10,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _difficulty == DifficultyMode.brutalImpossible
-                ? '🔥 BRUTAL HARDCORE (5X HP APEX OVERCLOCK)'
-                : 'DIFFICULTY: ${_difficulty.displayName.toUpperCase()}',
-            style: TextStyle(
-              color: _difficulty == DifficultyMode.brutalImpossible
-                  ? GameColors.crimsonDanger
-                  : GameColors.neonCyan,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
-            ),
           ),
         ],
       ),
@@ -494,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildMainPlayCta() {
     final isMax = _unlockedLevel > 20;
-    final lvlTitle = isMax ? 'PLAY ENDLESS MATRIX' : 'CONTINUE LEVEL $_unlockedLevel';
+    final lvlTitle = isMax ? 'PLAY ENDLESS' : 'PLAY LEVEL $_unlockedLevel';
 
     return SizedBox(
       width: double.infinity,
@@ -512,15 +478,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
             const SizedBox(width: 8),
             Text(
               lvlTitle,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 18,
-                letterSpacing: 1.5,
+                fontSize: 17,
+                letterSpacing: 1.2,
               ),
             ),
           ],
@@ -538,29 +504,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Expanded(
               child: GlassCard(
                 onTap: _openLevelMap,
-                padding: const EdgeInsets.all(14),
-                borderRadius: 18,
+                padding: const EdgeInsets.all(12),
+                borderRadius: 16,
                 glow: true,
                 glowColor: GameColors.neonCyan,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 26),
-                        Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 20),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('1000 SECTORS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 24),
+                    const SizedBox(height: 8),
+                    const Text('SECTOR MAP', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text('Level Map & Bosses', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                    Text('1,000 Levels', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10.5)),
                   ],
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
             // Daily Challenge Card
             Expanded(
@@ -570,86 +530,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     MaterialPageRoute(builder: (_) => const DailyChallengeScreen()),
                   ).then((_) => _loadSaveData());
                 },
-                padding: const EdgeInsets.all(14),
-                borderRadius: 18,
+                padding: const EdgeInsets.all(12),
+                borderRadius: 16,
                 glow: true,
                 glowColor: GameColors.electricAmber,
                 surfaceColor: const Color(0x22FFB300),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 26),
-                        Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 20),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('DAILY PUZZLE', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 24),
+                    const SizedBox(height: 8),
+                    const Text('DAILY QUEST', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    const Text('Streak Bounties 🔥', style: TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text('Rewards 🔥', style: TextStyle(color: GameColors.electricAmber, fontSize: 10.5, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
             // Brutal Hardcore Mode Card
             Expanded(
               child: GlassCard(
                 onTap: () => _startLevel(10, diff: DifficultyMode.brutalImpossible),
-                padding: const EdgeInsets.all(14),
-                borderRadius: 18,
+                padding: const EdgeInsets.all(12),
+                borderRadius: 16,
                 glow: true,
                 glowColor: GameColors.crimsonDanger,
                 surfaceColor: const Color(0x33FF1744),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Icon(Icons.local_fire_department_rounded, color: GameColors.crimsonDanger, size: 26),
-                        Text('5x HP', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 10, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('BRUTAL TRIAL', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Icon(Icons.local_fire_department_rounded, color: GameColors.crimsonDanger, size: 24),
+                    const SizedBox(height: 8),
+                    const Text('BRUTAL TRIAL', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    const Text('Overclock Apex', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text('5x Challenge', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 10.5, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
             // Endless Mode Card
             Expanded(
               child: GlassCard(
                 onTap: _startEndlessMode,
-                padding: const EdgeInsets.all(14),
-                borderRadius: 18,
+                padding: const EdgeInsets.all(12),
+                borderRadius: 16,
                 glow: true,
                 glowColor: GameColors.neonPurple,
                 surfaceColor: const Color(0x229D4EDD),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Icon(Icons.all_inclusive_rounded, color: GameColors.neonPurple, size: 26),
-                        Text('RISING', style: TextStyle(color: GameColors.neonPurple, fontSize: 10, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('ENDLESS MATRIX', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Icon(Icons.all_inclusive_rounded, color: GameColors.neonPurple, size: 24),
+                    const SizedBox(height: 8),
+                    const Text('ENDLESS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                    Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10.5)),
                   ],
                 ),
               ),
@@ -662,14 +604,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildStatsRibbon() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      borderRadius: 16,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('HIGH SCORE', '$_highScore', GameColors.neonCyan),
-          _buildStatItem('TOTAL STARS', '$_totalStars ⭐', GameColors.solarGold),
-          _buildStatItem('AMMUNITION', '$_permanentBalls ⚪', GameColors.neonLime),
+          _buildStatItem('BEST', '$_highScore', GameColors.neonCyan),
+          _buildStatItem('STARS', '$_totalStars ⭐', GameColors.solarGold),
+          _buildStatItem('BALLS', '$_permanentBalls ⚪', GameColors.neonLime),
         ],
       ),
     );

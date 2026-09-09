@@ -165,41 +165,16 @@ class GamePainter extends CustomPainter {
       );
     }
 
-    // 4. Luminous Danger Badge Pill (Top Right)
-    final badgeWidth = 100.0;
-    final badgeHeight = 18.0;
-    final badgeRect = Rect.fromLTWH(size.width - badgeWidth - 8, dangerY - badgeHeight - 4, badgeWidth, badgeHeight);
-
-    final badgeBgPaint = Paint()
-      ..color = Colors.black.withOpacity(0.75)
-      ..style = PaintingStyle.fill;
-    final badgeBorderPaint = Paint()
-      ..color = GameColors.crimsonDanger.withOpacity(0.85)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    final rrect = RRect.fromRectAndRadius(badgeRect, const Radius.circular(6.0));
-    canvas.drawRRect(rrect, badgeBgPaint);
-    canvas.drawRRect(rrect, badgeBorderPaint);
-
-    // Flashing Warning Dot
+    // 4. Sleek Warning Beacon (Right Edge, minimal icon only)
     final beaconPaint = Paint()
       ..color = GameColors.crimsonDanger.withOpacity(pulse)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(badgeRect.left + 10, badgeRect.center.dy), 3.5, beaconPaint);
-
-    final textSpan = TextSpan(
-      text: 'DANGER LINE',
-      style: TextStyle(
-        color: Colors.white.withOpacity(0.95),
-        fontSize: 8.5,
-        fontWeight: FontWeight.w900,
-        fontFamily: 'Roboto',
-        letterSpacing: 1.2,
-      ),
-    );
-    final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-    tp.paint(canvas, Offset(badgeRect.left + 18, badgeRect.center.dy - tp.height / 2));
+    canvas.drawCircle(Offset(size.width - 16, dangerY), 4.0, beaconPaint);
+    final ringPaint = Paint()
+      ..color = Colors.white.withOpacity(pulse)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(Offset(size.width - 16, dangerY), 7.0, ringPaint);
   }
 
   void _renderBricks(Canvas canvas, double cw, double ch) {

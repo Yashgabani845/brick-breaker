@@ -253,10 +253,10 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Pause Button
-            IconButton(
-              icon: const Icon(Icons.pause_circle_filled_rounded, color: Colors.white, size: 36),
-              onPressed: () {
+            // Compact Glass Pause Button
+            GestureDetector(
+              onTap: () {
+                AudioSynthesizer.instance.playUiClick();
                 _controller.togglePause();
                 GlassModal.show(
                   context: context,
@@ -287,56 +287,91 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
                   ),
                 );
               },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Icon(Icons.pause_rounded, color: Colors.white, size: 20),
+              ),
             ),
 
-            // Level Title & Difficulty Indicator
-            Column(
-              children: [
-                Text(
-                  'LEVEL ${_controller.currentLevel.levelNumber}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.2),
-                ),
-                Text(
-                  _controller.difficulty == DifficultyMode.brutalImpossible
-                      ? '🔥 BRUTAL IMPOSSIBLE'
-                      : _controller.currentLevel.archetype.displayName.toUpperCase(),
-                  style: TextStyle(
-                    color: _controller.difficulty == DifficultyMode.brutalImpossible
-                        ? GameColors.crimsonDanger
-                        : GameColors.neonCyan,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-
-            // Score & Combo Multiplier Badge
-            GlassCard(
+            // Minimalist Level Chip
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              borderRadius: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: GameColors.neonCyan.withOpacity(0.5)),
+              ),
+              child: Text(
+                'LVL ${_controller.currentLevel.levelNumber}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+
+            // Score & Combo Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '$score',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                  ),
-                  if (combo > 1.0)
-                    Text(
-                      'COMBO x${combo.toStringAsFixed(1)}',
-                      style: const TextStyle(color: GameColors.solarGold, fontWeight: FontWeight.w900, fontSize: 10),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
                     ),
-                  // Show +BALL TURN counter (neon lime) during active simulation
-                  if (_controller.turnBallsThisTurn > 0)
-                    Text(
-                      '+${_controller.turnBallsThisTurn} TURN BALL${_controller.turnBallsThisTurn > 1 ? "S" : ""}',
-                      style: const TextStyle(
-                        color: Color(0xFF39FF14),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 9,
+                  ),
+                  if (combo > 1.0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: GameColors.solarGold.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'x${combo.toStringAsFixed(1)}',
+                        style: const TextStyle(
+                          color: GameColors.solarGold,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
+                  ],
+                  if (_controller.turnBallsThisTurn > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF39FF14).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '+${_controller.turnBallsThisTurn}⚪',
+                        style: const TextStyle(
+                          color: Color(0xFF39FF14),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -352,77 +387,87 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
       builder: (context, _) {
         final isSimulating = _controller.state == GameState.simulating || _controller.state == GameState.firing;
 
-        return GlassCard(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          borderRadius: 18,
-          surfaceColor: Colors.black.withOpacity(0.65),
-          borderColor: Colors.white.withOpacity(0.18),
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white12),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Lightning Booster
+              // Lightning
               _buildBoosterButton(
                 icon: Icons.bolt_rounded,
                 color: GameColors.neonCyan,
-                label: 'LIGHTNING',
                 badgeCount: _controller.lightningBoosterCount,
                 onTap: () => _controller.useLightningBooster(),
                 enabled: _controller.state == GameState.aiming && _controller.lightningBoosterCount > 0,
               ),
 
-              // Super Nuke Booster
+              // Super Nuke
               _buildBoosterButton(
                 icon: Icons.crisis_alert_rounded,
                 color: GameColors.neonPurple,
-                label: 'NUKE',
                 badgeCount: _controller.superNukeBoosterCount,
                 onTap: () => _controller.useSuperNukeBooster(),
                 enabled: _controller.state == GameState.aiming && _controller.superNukeBoosterCount > 0,
               ),
 
-              // Speed Multiplier (1x, 2x, 3x)
-              _buildBoosterButton(
-                icon: Icons.fast_forward_rounded,
-                color: GameColors.electricAmber,
-                label: '${_controller.speedMultiplier.toInt()}X',
-                onTap: () => _controller.toggleSpeed(),
-                enabled: true,
+              // Speed (1X, 2X, 3X)
+              GestureDetector(
+                onTap: () {
+                  AudioSynthesizer.instance.playUiClick();
+                  _controller.toggleSpeed();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: GameColors.electricAmber.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: GameColors.electricAmber.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.fast_forward_rounded, color: GameColors.electricAmber, size: 16),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${_controller.speedMultiplier.toInt()}X',
+                        style: const TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
-              // Instant Recall Magnet
+              // Recall Magnet
               _buildBoosterButton(
                 icon: Icons.download_rounded,
                 color: GameColors.emeraldGreen,
-                label: 'RECALL',
                 onTap: () => _controller.triggerRecallMagnet(),
                 enabled: isSimulating,
               ),
 
-              // Sandbox / Physics Lab
+              // Sandbox Lab
               GestureDetector(
                 onTap: () {
                   AudioSynthesizer.instance.playUiClick();
                   GlassModal.show(
                     context: context,
-                    title: 'SANDBOX LAB',
+                    title: 'SANDBOX',
                     child: SandboxDebugModal(controller: _controller),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.white12),
                   ),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.science_rounded, color: Colors.white70, size: 18),
-                      SizedBox(height: 2),
-                      Text('LAB', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  child: const Icon(Icons.science_rounded, color: Colors.white60, size: 18),
                 ),
               ),
             ],
@@ -435,7 +480,6 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
   Widget _buildBoosterButton({
     required IconData icon,
     required Color color,
-    required String label,
     required VoidCallback onTap,
     int? badgeCount,
     bool enabled = true,
@@ -448,47 +492,36 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
             }
           : null,
       child: Opacity(
-        opacity: enabled ? 1.0 : 0.35,
+        opacity: enabled ? 1.0 : 0.3,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: enabled ? color.withOpacity(0.16) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            color: enabled ? color.withOpacity(0.18) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: enabled ? color.withOpacity(0.6) : Colors.white10,
-              width: 1.0,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, color: enabled ? color : Colors.white38, size: 20),
-                  if (badgeCount != null && badgeCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -7,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '$badgeCount',
-                          style: const TextStyle(color: Colors.black, fontSize: 7.5, fontWeight: FontWeight.w900),
-                        ),
-                      ),
+              Icon(icon, color: enabled ? color : Colors.white38, size: 20),
+              if (badgeCount != null && badgeCount > 0)
+                Positioned(
+                  top: -5,
+                  right: -7,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(5),
                     ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(color: enabled ? color : Colors.white38, fontSize: 8.5, fontWeight: FontWeight.w900),
-              ),
+                    child: Text(
+                      '$badgeCount',
+                      style: const TextStyle(color: Colors.black, fontSize: 7.5, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

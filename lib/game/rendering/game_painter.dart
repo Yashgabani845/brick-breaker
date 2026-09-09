@@ -43,7 +43,7 @@ class GamePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cellWidth = size.width / columns;
-    final cellHeight = (launcherPosition.y * 0.74) / rows;
+    final cellHeight = (launcherPosition.y * 0.78) / rows;
 
     // 1. Render Deep OLED Cosmic Background & Grid
     _renderBackground(canvas, size, cellWidth, cellHeight);

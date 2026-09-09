@@ -77,10 +77,9 @@ class GameController extends ChangeNotifier {
 
   void setDimensions(double width, double height) {
     playfieldWidth = width;
-    // Dedicated playfield height - reserves bottom 18% for the controls dock
-    playfieldHeight = height * 0.81;
+    playfieldHeight = height;
     cellWidth = width / currentLevel.columns;
-    cellHeight = (playfieldHeight * 0.74) / currentLevel.rows;
+    cellHeight = (playfieldHeight * 0.78) / currentLevel.rows;
 
     physicsEngine = PhysicsEngine(
       columns: currentLevel.columns,
@@ -90,7 +89,7 @@ class GameController extends ChangeNotifier {
     );
 
     if (state == GameState.aiming) {
-      launcherPosition.set(playfieldWidth / 2, playfieldHeight - 12.0);
+      launcherPosition.set(playfieldWidth / 2, playfieldHeight - 14.0);
     }
     notifyListeners();
   }

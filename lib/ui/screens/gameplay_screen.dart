@@ -185,59 +185,57 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _controller.setDimensions(constraints.maxWidth, constraints.maxHeight);
+        child: Column(
+          children: [
+            // 1. Dedicated Top HUD Header (Pause, Level Chip, Score & Combo)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+              child: _buildTopHud(),
+            ),
 
-            return Stack(
-              children: [
-                // 1. Playfield CustomPainter with Gesture Controls
-                GestureDetector(
-                  onPanStart: (details) => _controller.onAimStart(details.localPosition),
-                  onPanUpdate: (details) => _controller.onAimUpdate(details.localPosition),
-                  onPanEnd: (_) => _controller.onAimEnd(),
-                  child: AnimatedBuilder(
-                    animation: _ticker,
-                    builder: (context, _) {
-                      return CustomPaint(
-                        size: Size(constraints.maxWidth, constraints.maxHeight),
-                        painter: GamePainter(
-                          bricks: _controller.bricks,
-                          balls: _controller.balls,
-                          trajectory: _controller.currentTrajectory,
-                          launcherPosition: _controller.launcherPosition,
-                          activeBallCount: _controller.balls.where((b) => b.isActive).length,
-                          permanentBallCount: _controller.permanentBalls,
-                          isAiming: _controller.isDraggingAim,
-                          dangerRow: _controller.currentLevel.dangerRow,
-                          columns: _controller.currentLevel.columns,
-                          rows: _controller.currentLevel.rows,
-                          animationProgress: _ticker.value,
-                          themeColor: _controller.currentLevel.themeColor,
-                        ),
-                      );
-                    },
-                  ),
-                ),
+            // 2. Clear, Unobstructed Playground Canvas (Starts cleanly AFTER the top HUD)
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  _controller.setDimensions(constraints.maxWidth, constraints.maxHeight);
 
-                // 2. Top Glass HUD Bar
-                Positioned(
-                  top: 8,
-                  left: 14,
-                  right: 14,
-                  child: _buildTopHud(),
-                ),
+                  return GestureDetector(
+                    onPanStart: (details) => _controller.onAimStart(details.localPosition),
+                    onPanUpdate: (details) => _controller.onAimUpdate(details.localPosition),
+                    onPanEnd: (_) => _controller.onAimEnd(),
+                    child: AnimatedBuilder(
+                      animation: _ticker,
+                      builder: (context, _) {
+                        return CustomPaint(
+                          size: Size(constraints.maxWidth, constraints.maxHeight),
+                          painter: GamePainter(
+                            bricks: _controller.bricks,
+                            balls: _controller.balls,
+                            trajectory: _controller.currentTrajectory,
+                            launcherPosition: _controller.launcherPosition,
+                            activeBallCount: _controller.balls.where((b) => b.isActive).length,
+                            permanentBallCount: _controller.permanentBalls,
+                            isAiming: _controller.isDraggingAim,
+                            dangerRow: _controller.currentLevel.dangerRow,
+                            columns: _controller.currentLevel.columns,
+                            rows: _controller.currentLevel.rows,
+                            animationProgress: _ticker.value,
+                            themeColor: _controller.currentLevel.themeColor,
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
 
-                // 3. Bottom Glass Booster & Controls Dock
-                Positioned(
-                  bottom: 12,
-                  left: 14,
-                  right: 14,
-                  child: _buildBottomBoosterDock(),
-                ),
-              ],
-            );
-          },
+            // 3. Bottom Booster & Controls Dock
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14.0, 4.0, 14.0, 10.0),
+              child: _buildBottomBoosterDock(),
+            ),
+          ],
         ),
       ),
     );

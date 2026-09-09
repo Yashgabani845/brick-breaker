@@ -116,11 +116,6 @@ class PhysicsEngine {
           final brick = candidates[c];
           if (brick.isDestroyed) continue;
 
-          // Prevent same ball hitting same brick twice in a microsecond
-          if (ball.hitCooldown > 0 && ball.lastHitBrickId == brick.id) {
-            continue;
-          }
-
           final bx = brick.gridX * cellWidth;
           final by = brick.gridY * cellHeight;
 
@@ -149,7 +144,6 @@ class PhysicsEngine {
 
           if (result.collided) {
             ball.lastHitBrickId = brick.id;
-            ball.hitCooldown = 0.04; // 40ms cooldown
 
             // Handle special collectible blocks (no deflection, passed through or collected)
             if (brick.type == BrickType.permanentAdder) {

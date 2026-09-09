@@ -203,12 +203,16 @@ class CollisionSystem {
   static void resolveBallCollision(Ball ball, CollisionResult result) {
     if (!result.collided) return;
 
-    // Separate ball from obstacle
-    ball.position.x += result.normal.x * (result.penetration + 0.1);
-    ball.position.y += result.normal.y * (result.penetration + 0.1);
+    // Separate ball from obstacle completely
+    final separation = (result.penetration > 0 ? result.penetration : 0.0) + 0.5;
+    ball.position.x += result.normal.x * separation;
+    ball.position.y += result.normal.y * separation;
 
-    // Reflect velocity V' = V - 2(V · N)N
-    ball.velocity.reflectInPlace(result.normal);
+    // Only reflect velocity if ball is moving into the normal surface (dot < 0)
+    final dot = ball.velocity.dot(result.normal);
+    if (dot < 0) {
+      ball.velocity.reflectInPlace(result.normal);
+    }
 
     // Safeguard: Ensure velocity maintains a minimum vertical ratio so it doesn't get stuck forever horizontally
     ball.velocity.clampTrajectoryAngle(minVerticalRatio: 0.12);

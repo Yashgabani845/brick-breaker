@@ -25,18 +25,6 @@ class Brick3DRenderer {
     } else {
       _render3DRectangle(canvas, brick, rect, depth);
     }
-
-    // Render Hit Flash overlay if actively taking damage
-    if (brick.hitFlashTimer > 0) {
-      final flashOpacity = (brick.hitFlashTimer / 0.12).clamp(0.0, 0.85);
-      final flashPaint = Paint()
-        ..color = Colors.white.withOpacity(flashOpacity)
-        ..style = PaintingStyle.fill;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4.5)),
-        flashPaint,
-      );
-    }
   }
 
   static void _render3DRectangle(Canvas canvas, Brick brick, Rect rect, double depth) {

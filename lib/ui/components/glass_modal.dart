@@ -1,9 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
 import 'glass_card.dart';
 
-/// Modal dialog styled with glassmorphism and backdrop blur
+/// Modal dialog styled with clean elevated dark surface
 class GlassModal extends StatelessWidget {
   final Widget child;
   final String? title;
@@ -27,7 +26,7 @@ class GlassModal extends StatelessWidget {
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withOpacity(0.80),
       builder: (ctx) => GlassModal(
         title: title,
         onClose: () => Navigator.of(ctx).pop(),
@@ -46,9 +45,10 @@ class GlassModal extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: GlassCard(
-              glow: true,
-              glowColor: GameColors.neonCyan,
-              padding: const EdgeInsets.all(24.0),
+              surfaceColor: GameColors.surfaceCard,
+              borderColor: GameColors.glassBorder,
+              borderRadius: 20,
+              padding: const EdgeInsets.all(22.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -59,20 +59,21 @@ class GlassModal extends StatelessWidget {
                         Text(
                           title!,
                           style: const TextStyle(
-                            fontSize: 22.0,
+                            fontSize: 18.0,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
-                            letterSpacing: 1.2,
+                            letterSpacing: 1.0,
                           ),
                         ),
                         if (onClose != null)
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white70),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                             onPressed: onClose,
+                            visualDensity: VisualDensity.compact,
                           ),
                       ],
                     ),
-                    const Divider(color: Colors.white24, height: 24),
+                    const Divider(color: Colors.white12, height: 20),
                   ],
                   child,
                 ],

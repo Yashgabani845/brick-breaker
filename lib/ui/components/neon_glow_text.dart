@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/game_colors.dart';
 
-/// Radiant Cyberpunk Neon Glowing Text
+/// Crisp High-Contrast Arcade Text
 class NeonGlowText extends StatelessWidget {
   final String text;
   final double fontSize;
@@ -18,14 +17,12 @@ class NeonGlowText extends StatelessWidget {
     this.color = Colors.white,
     this.glowColor,
     this.fontWeight = FontWeight.w900,
-    this.letterSpacing = 1.2,
+    this.letterSpacing = 1.0,
     this.textAlign = TextAlign.start,
   });
 
   @override
   Widget build(BuildContext context) {
-    final glow = glowColor ?? GameColors.neonCyan;
-
     return Text(
       text,
       textAlign: textAlign,
@@ -36,18 +33,15 @@ class NeonGlowText extends StatelessWidget {
         letterSpacing: letterSpacing,
         shadows: [
           Shadow(
-            color: glow.withOpacity(0.9),
-            blurRadius: 10.0,
-          ),
-          Shadow(
-            color: glow.withOpacity(0.5),
-            blurRadius: 22.0,
-          ),
-          const Shadow(
-            color: Colors.black,
+            color: Colors.black.withOpacity(0.8),
+            offset: const Offset(0, 2),
             blurRadius: 4.0,
-            offset: Offset(0, 2),
           ),
+          if (glowColor != null)
+            Shadow(
+              color: glowColor!.withOpacity(0.4),
+              blurRadius: 8.0,
+            ),
         ],
       ),
     );

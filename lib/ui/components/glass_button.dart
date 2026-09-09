@@ -1,9 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
 import '../../game/systems/audio_synthesizer.dart';
 
-/// Neon Gradient Glassmorphic Interactive Button
+/// Crisp Neon Gradient Arcade Interactive Button
 class GlassButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onPressed;
@@ -19,8 +18,8 @@ class GlassButton extends StatefulWidget {
     required this.child,
     required this.onPressed,
     this.gradient,
-    this.borderRadius = 16.0,
-    this.padding = const EdgeInsets.symmetric(horizontal: 24.0, vertical: 14.0),
+    this.borderRadius = 14.0,
+    this.padding = const EdgeInsets.symmetric(horizontal: 20.0, vertical: 13.0),
     this.isPrimary = true,
     this.width,
     this.height,
@@ -37,8 +36,8 @@ class _GlassButtonState extends State<GlassButton> {
   Widget build(BuildContext context) {
     final colors = widget.gradient ??
         (widget.isPrimary
-            ? [GameColors.neonCyan, const Color(0xFF0077FF)]
-            : [GameColors.glassSurfaceLight, GameColors.glassSurface]);
+            ? [const Color(0xFF00D4FF), const Color(0xFF0066FF)]
+            : [GameColors.surfaceCardHover, GameColors.surfaceCard]);
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -49,11 +48,12 @@ class _GlassButtonState extends State<GlassButton> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 100),
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 80),
         child: Container(
           width: widget.width,
           height: widget.height,
+          padding: widget.padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
@@ -62,27 +62,18 @@ class _GlassButtonState extends State<GlassButton> {
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: Colors.white.withOpacity(0.35),
-              width: 1.2,
+              color: Colors.white.withOpacity(widget.isPrimary ? 0.3 : 0.15),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: colors.first.withOpacity(_isPressed ? 0.3 : 0.5),
-                blurRadius: _isPressed ? 8 : 16,
-                offset: _isPressed ? const Offset(0, 2) : const Offset(0, 5),
+                color: colors.first.withOpacity(_isPressed ? 0.2 : (widget.isPrimary ? 0.35 : 0.1)),
+                blurRadius: _isPressed ? 4 : 10,
+                offset: _isPressed ? const Offset(0, 1) : const Offset(0, 3),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Padding(
-                padding: widget.padding,
-                child: Center(child: widget.child),
-              ),
-            ),
-          ),
+          child: Center(child: widget.child),
         ),
       ),
     );

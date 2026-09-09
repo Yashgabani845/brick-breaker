@@ -176,14 +176,24 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                     },
                   ),
                   const SizedBox(width: 8),
-                  const NeonGlowText('SECTOR MAP', fontSize: 22.0, glowColor: GameColors.neonCyan),
+                  const Text(
+                    'SECTOR MAP',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
                   const Spacer(),
                   // Stars Tracker
-                  GlassCard(
+                  Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    borderRadius: 12,
-                    glow: true,
-                    glowColor: GameColors.solarGold,
+                    decoration: BoxDecoration(
+                      color: GameColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: GameColors.solarGold.withOpacity(0.4)),
+                    ),
                     child: Row(
                       children: [
                         const Icon(Icons.star_rounded, color: GameColors.solarGold, size: 16),

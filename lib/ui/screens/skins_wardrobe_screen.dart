@@ -75,12 +75,24 @@ class _SkinsWardrobeScreenState extends State<SkinsWardrobeScreen> {
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(width: 8),
-                      const NeonGlowText('BALL WARDROBE', fontSize: 20.0, glowColor: GameColors.neonPurple),
+                      const Text(
+                        'BALL WARDROBE',
+                        style: TextStyle(
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
                     ],
                   ),
-                  GlassCard(
+                  Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    borderRadius: 12,
+                    decoration: BoxDecoration(
+                      color: GameColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: GameColors.glassBorder),
+                    ),
                     child: Row(
                       children: [
                         const Text('🪙', style: TextStyle(fontSize: 14)),
@@ -97,10 +109,9 @@ class _SkinsWardrobeScreenState extends State<SkinsWardrobeScreen> {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: GlassCard(
-                glow: true,
-                glowColor: _selectedSkin.glowColor,
+                borderColor: _selectedSkin.glowColor.withOpacity(0.4),
                 padding: const EdgeInsets.symmetric(vertical: 24),
-                borderRadius: 24,
+                borderRadius: 20,
                 child: Center(
                   child: Column(
                     children: [

@@ -23,22 +23,25 @@ class PauseModal extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const NeonGlowText(
+        const Text(
           'GAME PAUSED',
-          fontSize: 24.0,
-          color: Colors.white,
-          glowColor: GameColors.neonCyan,
+          style: TextStyle(
+            fontSize: 20.0,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 1.0,
+          ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 22),
         GlassButton(
           onPressed: onResume,
-          gradient: const [GameColors.neonCyan, Color(0xFF0077FF)],
+          gradient: const [Color(0xFF00C6FF), Color(0xFF0072FF)],
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+              Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
               SizedBox(width: 8),
-              Text('RESUME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('RESUME', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
         ),

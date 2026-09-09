@@ -4,33 +4,33 @@ import '../constants/game_colors.dart';
 
 /// Glassmorphism Theme and UI Style Helpers
 class GlassTheme {
-  /// Standard Frosted Glass Box Decoration
+  /// Standard Crisp Dark Card Box Decoration
   static BoxDecoration glassDecoration({
     Color? surfaceColor,
     Color? borderColor,
-    double borderRadius = 18.0,
-    double borderWidth = 1.2,
+    double borderRadius = 16.0,
+    double borderWidth = 1.0,
     bool glow = false,
     Color? glowColor,
   }) {
     return BoxDecoration(
-      color: surfaceColor ?? GameColors.glassSurface,
+      color: surfaceColor ?? GameColors.surfaceCard,
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: borderColor ?? GameColors.glassBorder,
+        color: borderColor ?? (glow ? (glowColor ?? GameColors.neonCyan).withOpacity(0.4) : GameColors.glassBorder),
         width: borderWidth,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.35),
-          blurRadius: 16,
-          offset: const Offset(0, 8),
+          color: Colors.black.withOpacity(0.4),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
         if (glow)
           BoxShadow(
-            color: (glowColor ?? GameColors.neonCyan).withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 1,
+            color: (glowColor ?? GameColors.neonCyan).withOpacity(0.15),
+            blurRadius: 12,
+            spreadRadius: 0,
           ),
       ],
     );
@@ -50,20 +50,16 @@ class GlassTheme {
         end: Alignment.bottomRight,
       ),
       border: Border.all(
-        color: Colors.white.withOpacity(0.4),
+        color: Colors.white.withOpacity(0.25),
         width: 1.0,
       ),
       boxShadow: [
         BoxShadow(
-          color: gradientColors.first.withOpacity(pressed ? 0.3 : 0.6),
-          blurRadius: pressed ? 8 : 16,
-          offset: pressed ? const Offset(0, 2) : const Offset(0, 4),
+          color: gradientColors.first.withOpacity(pressed ? 0.2 : 0.4),
+          blurRadius: pressed ? 4 : 10,
+          offset: pressed ? const Offset(0, 1) : const Offset(0, 3),
         ),
       ],
     );
   }
-
-  /// Frosted Glass Filter
-  static ImageFilter get defaultBlurFilter => ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0);
-  static ImageFilter get heavyBlurFilter => ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0);
 }

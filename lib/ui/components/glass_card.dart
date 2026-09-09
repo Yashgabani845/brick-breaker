@@ -1,10 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
 import '../../core/theme/glass_theme.dart';
 import '../../game/systems/audio_synthesizer.dart';
 
-/// Ultra-Premium Glassmorphic Card Container with optional tactile tap & sound
+/// Crisp Dark Surface Card Container with responsive tactile tap & sound
 class GlassCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -22,12 +21,12 @@ class GlassCard extends StatefulWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16.0),
     this.margin,
-    this.borderRadius = 20.0,
+    this.borderRadius = 16.0,
     this.surfaceColor,
     this.borderColor,
     this.glow = false,
     this.glowColor,
-    this.blurSigma = 12.0,
+    this.blurSigma = 0.0,
     this.onTap,
   });
 
@@ -40,25 +39,17 @@ class _GlassCardState extends State<GlassCard> {
 
   @override
   Widget build(BuildContext context) {
-    Widget card = Container(
+    final card = Container(
       margin: widget.margin,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-          child: Container(
-            padding: widget.padding,
-            decoration: GlassTheme.glassDecoration(
-              surfaceColor: widget.surfaceColor ?? GameColors.glassSurface,
-              borderColor: widget.borderColor ?? (widget.glow ? (widget.glowColor ?? GameColors.neonCyan) : GameColors.glassBorder),
-              borderRadius: widget.borderRadius,
-              glow: widget.glow,
-              glowColor: widget.glowColor,
-            ),
-            child: widget.child,
-          ),
-        ),
+      padding: widget.padding,
+      decoration: GlassTheme.glassDecoration(
+        surfaceColor: widget.surfaceColor ?? GameColors.surfaceCard,
+        borderColor: widget.borderColor ?? (widget.glow ? (widget.glowColor ?? GameColors.neonCyan).withOpacity(0.4) : GameColors.glassBorder),
+        borderRadius: widget.borderRadius,
+        glow: widget.glow,
+        glowColor: widget.glowColor,
       ),
+      child: widget.child,
     );
 
     if (widget.onTap != null) {
@@ -71,8 +62,8 @@ class _GlassCardState extends State<GlassCard> {
         },
         onTapCancel: () => setState(() => _isPressed = false),
         child: AnimatedScale(
-          scale: _isPressed ? 0.96 : 1.0,
-          duration: const Duration(milliseconds: 90),
+          scale: _isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 80),
           child: card,
         ),
       );

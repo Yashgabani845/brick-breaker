@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 class GameColors {
   // Backgrounds & Dual Black Theme Options
   static const Color oledDark = Color(0xFF000000); // 100% Pure Pitch OLED Black
-  static const Color spaceDark = Color(0xFF080D1A); // Deep Cyber Space Navy
-  static const Color glassSurface = Color(0x221E293B);
-  static const Color glassSurfaceLight = Color(0x33334155);
-  static const Color glassBorder = Color(0x40FFFFFF);
-  static const Color glassBorderGlow = Color(0x8000F0FF);
+  static const Color spaceDark = Color(0xFF090D16); // Deep Cyber Space Navy
+  static const Color surfaceDark = Color(0xFF111827); // Crisp Dark Slate Surface
+  static const Color surfaceCard = Color(0xFF161F30); // Elevated Card Surface
+  static const Color surfaceCardHover = Color(0xFF1E293B); // Interactive Hover Surface
+  static const Color glassSurface = Color(0xFF131C2E); // Solid Crisp Surface (No Murky Blur)
+  static const Color glassSurfaceLight = Color(0xFF1E2B45);
+  static const Color glassBorder = Color(0x1FFFFFFF); // Subtle Crisp Border
+  static const Color glassBorderGlow = Color(0x6600F0FF); // Clean Cyan Border Accent
 
   // Radiant Neon Accents (Vibrant & High-Contrast)
   static const Color neonCyan = Color(0xFF00F0FF);

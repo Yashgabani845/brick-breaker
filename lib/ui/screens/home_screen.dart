@@ -305,41 +305,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return AnimatedBuilder(
       animation: _floatController,
       builder: (context, child) {
-        final floatOffset = math.sin(_floatController.value * math.pi) * 3.0;
+        final floatOffset = math.sin(_floatController.value * math.pi) * 2.5;
 
         return Transform.translate(
           offset: Offset(0, floatOffset),
-          child: GlassCard(
+          child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            borderRadius: 22,
-            glow: true,
-            glowColor: GameColors.neonCyan,
-            surfaceColor: const Color(0x1A00F0FF),
+            decoration: BoxDecoration(
+              color: GameColors.surfaceCard,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: GameColors.glassBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                // Glowing App Logo Emblem
+                // Clean App Logo Emblem
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 58,
+                  height: 58,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: GameColors.neonCyan.withOpacity(0.6), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: GameColors.neonCyan.withOpacity(0.35),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: GameColors.neonCyan.withOpacity(0.5), width: 1.2),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(13),
                     child: Image.asset(
                       'assets/images/app_logo.png',
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: Colors.black,
-                        child: const Icon(Icons.sports_esports_rounded, color: GameColors.neonCyan, size: 36),
+                        child: const Icon(Icons.sports_esports_rounded, color: GameColors.neonCyan, size: 32),
                       ),
                     ),
                   ),
@@ -353,29 +354,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     children: [
                       Row(
                         children: const [
-                          NeonGlowText(
+                          Text(
                             'BRICKS BREAKER',
-                            fontSize: 18.0,
-                            color: Colors.white,
-                            glowColor: GameColors.neonCyan,
-                            letterSpacing: 1.2,
+                            style: TextStyle(
+                              fontSize: 17.0,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 1.0,
+                            ),
                           ),
                           SizedBox(width: 6),
-                          NeonGlowText(
+                          Text(
                             '3D',
-                            fontSize: 20.0,
-                            color: GameColors.neonMagenta,
-                            glowColor: GameColors.neonMagenta,
-                            letterSpacing: 1.5,
+                            style: TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.w900,
+                              color: GameColors.neonMagenta,
+                              letterSpacing: 1.2,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         '1,000 CYBER LEVELS',
                         style: TextStyle(
-                          color: GameColors.neonCyan.withOpacity(0.8),
-                          fontSize: 10,
+                          color: GameColors.neonCyan.withOpacity(0.9),
+                          fontSize: 10.5,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.8,
                         ),
@@ -393,10 +398,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _build3dSwarmShowcase() {
     return GlassCard(
-      glow: true,
-      glowColor: _currentSkin.glowColor,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: 22,
+      borderRadius: 18,
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SkinsWardrobeScreen()),
@@ -406,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           // 3D Swarm Canvas
           SizedBox(
-            height: 120,
+            height: 110,
             child: Center(
               child: Swarm3dSphere(
                 ballCount: _permanentBalls,
@@ -419,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // Swarm Count & Skin Name
           Row(
@@ -429,18 +432,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 '$_permanentBalls BALLS',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
+                  letterSpacing: 0.8,
                 ),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _currentSkin.glowColor.withOpacity(0.25),
+                  color: _currentSkin.glowColor.withOpacity(0.18),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _currentSkin.glowColor.withOpacity(0.6)),
+                  border: Border.all(color: _currentSkin.glowColor.withOpacity(0.4)),
                 ),
                 child: Text(
                   _currentSkin.displayName.toUpperCase(),
@@ -472,21 +475,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             _startLevel(_unlockedLevel);
           }
         },
-        gradient: const [GameColors.neonCyan, Color(0xFF0077FF), Color(0xFF8B5CF6)],
+        gradient: const [Color(0xFF00C6FF), Color(0xFF0072FF)],
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        borderRadius: 20.0,
+        borderRadius: 16.0,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
             const SizedBox(width: 8),
             Text(
               lvlTitle,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 17,
-                letterSpacing: 1.2,
+                fontSize: 16,
+                letterSpacing: 1.0,
               ),
             ),
           ],
@@ -505,17 +508,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: GlassCard(
                 onTap: _openLevelMap,
                 padding: const EdgeInsets.all(12),
-                borderRadius: 16,
-                glow: true,
-                glowColor: GameColors.neonCyan,
+                borderRadius: 14,
+                borderColor: GameColors.neonCyan.withOpacity(0.35),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 24),
+                    const Icon(Icons.map_rounded, color: GameColors.neonCyan, size: 22),
                     const SizedBox(height: 8),
                     const Text('SECTOR MAP', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text('1,000 Levels', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10.5)),
+                    Text('1,000 Levels', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 10.5)),
                   ],
                 ),
               ),
@@ -531,14 +533,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ).then((_) => _loadSaveData());
                 },
                 padding: const EdgeInsets.all(12),
-                borderRadius: 16,
-                glow: true,
-                glowColor: GameColors.electricAmber,
-                surfaceColor: const Color(0x22FFB300),
+                borderRadius: 14,
+                borderColor: GameColors.electricAmber.withOpacity(0.35),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 24),
+                    const Icon(Icons.calendar_month_rounded, color: GameColors.electricAmber, size: 22),
                     const SizedBox(height: 8),
                     const Text('DAILY QUEST', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
@@ -557,18 +557,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: GlassCard(
                 onTap: () => _startLevel(10, diff: DifficultyMode.brutalImpossible),
                 padding: const EdgeInsets.all(12),
-                borderRadius: 16,
-                glow: true,
-                glowColor: GameColors.crimsonDanger,
-                surfaceColor: const Color(0x33FF1744),
+                borderRadius: 14,
+                borderColor: GameColors.crimsonDanger.withOpacity(0.35),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.local_fire_department_rounded, color: GameColors.crimsonDanger, size: 24),
+                    const Icon(Icons.local_fire_department_rounded, color: GameColors.crimsonDanger, size: 22),
                     const SizedBox(height: 8),
                     const Text('BRUTAL TRIAL', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    const Text('5x Challenge', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    const Text('Boss Trial', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 10.5, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -580,18 +578,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: GlassCard(
                 onTap: _startEndlessMode,
                 padding: const EdgeInsets.all(12),
-                borderRadius: 16,
-                glow: true,
-                glowColor: GameColors.neonPurple,
-                surfaceColor: const Color(0x229D4EDD),
+                borderRadius: 14,
+                borderColor: GameColors.neonPurple.withOpacity(0.35),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.all_inclusive_rounded, color: GameColors.neonPurple, size: 24),
+                    const Icon(Icons.all_inclusive_rounded, color: GameColors.neonPurple, size: 22),
                     const SizedBox(height: 8),
                     const Text('ENDLESS', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10.5)),
+                    Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 10.5)),
                   ],
                 ),
               ),

@@ -104,15 +104,24 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                     },
                   ),
                   const SizedBox(width: 4),
-                  const NeonGlowText('DAILY PUZZLE', fontSize: 20.0, glowColor: GameColors.electricAmber),
+                  const Text(
+                    'DAILY PUZZLE',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
                   const Spacer(),
                   // Live Countdown Clock
-                  GlassCard(
+                  Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    borderRadius: 12,
-                    glow: true,
-                    glowColor: GameColors.electricAmber,
-                    surfaceColor: const Color(0x33FFB300),
+                    decoration: BoxDecoration(
+                      color: GameColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: GameColors.electricAmber.withOpacity(0.4)),
+                    ),
                     child: Row(
                       children: [
                         const Icon(Icons.timer_outlined, color: GameColors.electricAmber, size: 16),
@@ -122,7 +131,6 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
-                            fontFamily: 'Courier',
                             fontSize: 12,
                           ),
                         ),
@@ -133,13 +141,11 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Hero Daily Puzzle Hologram Card
+              // Hero Daily Puzzle Card
               GlassCard(
-                glow: true,
-                glowColor: GameColors.electricAmber,
-                surfaceColor: const Color(0x22FFB300),
+                borderColor: GameColors.electricAmber.withOpacity(0.4),
                 padding: const EdgeInsets.all(18.0),
-                borderRadius: 22.0,
+                borderRadius: 18.0,
                 child: Column(
                   children: [
                     Row(

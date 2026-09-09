@@ -23,13 +23,16 @@ class GameOverModal extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.warning_amber_rounded, size: 54, color: GameColors.crimsonDanger),
+        const Icon(Icons.warning_amber_rounded, size: 48, color: GameColors.crimsonDanger),
         const SizedBox(height: 8),
-        const NeonGlowText(
+        const Text(
           'DANGER LINE BREACHED',
-          fontSize: 20.0,
-          color: Colors.white,
-          glowColor: GameColors.crimsonDanger,
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 1.0,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),

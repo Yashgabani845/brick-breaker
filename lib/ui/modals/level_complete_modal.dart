@@ -31,13 +31,16 @@ class LevelCompleteModal extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const NeonGlowText(
+        const Text(
           'LEVEL CLEARED!',
-          fontSize: 26.0,
-          color: Colors.white,
-          glowColor: GameColors.emeraldGreen,
+          style: TextStyle(
+            fontSize: 22.0,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 1.0,
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
 
         // Stars Display
         Row(
@@ -45,21 +48,16 @@ class LevelCompleteModal extends StatelessWidget {
           children: List.generate(3, (index) {
             final isLit = index < stars;
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+              padding: const EdgeInsets.symmetric(horizontal: 5.0),
               child: Icon(
                 Icons.star_rounded,
-                size: 44.0,
+                size: 40.0,
                 color: isLit ? GameColors.solarGold : Colors.white24,
-                shadows: isLit
-                    ? [
-                        const Shadow(color: GameColors.solarGold, blurRadius: 16),
-                      ]
-                    : null,
               ),
             );
           }),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
         // Score & Stats Container
         Container(

@@ -62,13 +62,13 @@ extension DifficultyModeExtension on DifficultyMode {
   double get hpMultiplier {
     switch (this) {
       case DifficultyMode.relaxed:
-        return 0.7;
+        return 0.65;
       case DifficultyMode.standard:
         return 1.0;
       case DifficultyMode.hardcore:
-        return 2.5;
+        return 1.35;
       case DifficultyMode.brutalImpossible:
-        return 5.0; // Extreme tough HP
+        return 1.75; // Fair, tough, but logically beatable
     }
   }
 
@@ -79,9 +79,9 @@ extension DifficultyModeExtension on DifficultyMode {
       case DifficultyMode.standard:
         return 3;
       case DifficultyMode.hardcore:
-        return 1;
+        return 2;
       case DifficultyMode.brutalImpossible:
-        return 1; // Minimal trajectory guide
+        return 2; // Clear 2-bounce trajectory guide for tactical precision
     }
   }
 
@@ -92,9 +92,9 @@ extension DifficultyModeExtension on DifficultyMode {
       case DifficultyMode.standard:
         return 1.5;
       case DifficultyMode.hardcore:
-        return 3.0;
+        return 2.5;
       case DifficultyMode.brutalImpossible:
-        return 10.0;
+        return 5.0;
     }
   }
 }

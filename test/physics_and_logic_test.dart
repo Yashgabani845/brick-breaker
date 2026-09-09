@@ -123,8 +123,8 @@ void main() {
 
       final level10 = LevelCatalog.getLevel(10);
       expect(level10.archetype, LevelArchetype.impossibleCitadel);
-      expect(level10.turnLimit, 8);
       expect(level10.initialBricks.isNotEmpty, true);
+      expect(level10.startingBalls, 80);
     });
 
     test('ShapeLibrary provides diverse shapes and patterns', () {

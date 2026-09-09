@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_colors.dart';
 import '../models/brick.dart';
@@ -600,31 +600,31 @@ class ProceduralLevelGenerator {
 
   /// Position-aware brick type selection with feature gating
   static BrickType _selectType(int c, int r, int cols, _FeatureSet f,
-      math.Random rand, int lvl, {double stdChance = 0.62}) {
+      math.Random rand, int lvl, {double stdChance = 0.50}) {
     final roll = rand.nextDouble();
     double cur = stdChance;
     if (roll < cur) return BrickType.standard;
     cur += f.hasArmored ? 0.08 : 0;
     if (roll < cur) return BrickType.armoredBrick;
-    cur += f.hasWedge ? 0.07 : 0;
+    cur += f.hasWedge ? 0.08 : 0;
     if (roll < cur) {
       final wedges = [BrickType.wedgeTopLeft, BrickType.wedgeTopRight,
                       BrickType.wedgeBottomLeft, BrickType.wedgeBottomRight];
       return wedges[rand.nextInt(4)];
     }
-    cur += f.hasLaser ? 0.04 : 0;
+    cur += f.hasLaser ? 0.06 : 0;
     if (roll < cur) return BrickType.horizontalLaser;
-    cur += f.hasLaser ? 0.04 : 0;
+    cur += f.hasLaser ? 0.06 : 0;
     if (roll < cur) return BrickType.verticalLaser;
-    cur += f.hasCrossLaser ? 0.03 : 0;
+    cur += f.hasCrossLaser ? 0.04 : 0;
     if (roll < cur) return BrickType.crossLaser;
-    cur += f.hasBomb ? 0.03 : 0;
+    cur += f.hasBomb ? 0.05 : 0;
     if (roll < cur) return BrickType.clusterBomb;
-    cur += f.hasDynamite ? 0.03 : 0;
+    cur += f.hasDynamite ? 0.04 : 0;
     if (roll < cur) return BrickType.chainDynamite;
-    cur += f.hasNuke ? 0.015 : 0;
+    cur += f.hasNuke ? 0.025 : 0;
     if (roll < cur) return BrickType.superNuke;
-    cur += (f.hasTitanium && r <= 4) ? 0.02 : 0;
+    cur += (f.hasTitanium && r <= 3) ? 0.015 : 0;
     if (roll < cur) return BrickType.titaniumShield;
     return BrickType.standard;
   }
@@ -668,42 +668,40 @@ class ProceduralLevelGenerator {
     return _DiffTier.impossible;
   }
 
-  /// Psychographic wave rhythm: spike → plateau → relief → spike (20-level cycle)
+  /// Psychographic wave rhythm: gentle ramp → plateau → relief → boss spike
   static double _waveFactor(int lvl) {
     final pos = (lvl - 1) % 20;
-    if (pos <= 7)  return 1.0 + (pos / 7) * 0.30;   // ramp up
-    if (pos <= 12) return 1.30;                        // plateau
-    if (pos <= 17) return 1.30 - ((pos - 12) / 5) * 0.30; // relief
-    return 1.50; // boss spike at pos 18-19
+    if (pos <= 7)  return 1.0 + (pos / 7) * 0.15;        // mild ramp (1.00 -> 1.15)
+    if (pos <= 12) return 1.15;                           // plateau
+    if (pos <= 17) return 1.15 - ((pos - 12) / 5) * 0.15; // relief (1.15 -> 1.00)
+    return 1.25;                                          // boss milestone (1.25x)
   }
 
   static int _baseHp(int lvl, _DiffTier tier, double wave) {
     final base = switch (tier) {
-      _DiffTier.tutorial   => 12.0  + lvl * 2.5,
-      _DiffTier.easy       => 80.0  + (lvl - 50)  * 5.0,
-      _DiffTier.medium     => 430.0 + (lvl - 150) * 9.0,
-      _DiffTier.hard       => 2230.0 + (lvl - 350) * 18.0,
-      _DiffTier.extreme    => 6730.0 + (lvl - 600) * 28.0,
-      _DiffTier.impossible => 13730.0 + (lvl - 850) * 45.0,
+      _DiffTier.tutorial   => 4.0   + lvl * 0.6,
+      _DiffTier.easy       => 34.0  + (lvl - 50)  * 0.8,
+      _DiffTier.medium     => 114.0 + (lvl - 150) * 1.2,
+      _DiffTier.hard       => 354.0 + (lvl - 350) * 1.6,
+      _DiffTier.extreme    => 754.0 + (lvl - 600) * 2.0,
+      _DiffTier.impossible => 1254.0 + (lvl - 850) * 2.5,
     };
-    return (base * wave).round().clamp(12, 99999);
+    return (base * wave).round().clamp(4, 99999);
   }
 
   static int _startingBalls(int lvl, _DiffTier tier) {
     return switch (tier) {
-      _DiffTier.tutorial   => (25 + lvl ~/ 3).clamp(25, 42),
-      _DiffTier.easy       => (42 + (lvl - 50) ~/ 5).clamp(42, 62),
-      _DiffTier.medium     => (62 + (lvl - 150) ~/ 8).clamp(62, 86),
-      _DiffTier.hard       => (86 + (lvl - 350) ~/ 12).clamp(86, 106),
-      _DiffTier.extreme    => (106 + (lvl - 600) ~/ 16).clamp(106, 122),
-      _DiffTier.impossible => (122 + (lvl - 850) ~/ 20).clamp(122, 200),
+      _DiffTier.tutorial   => (30 + lvl ~/ 3).clamp(30, 50),
+      _DiffTier.easy       => (50 + (lvl - 50) ~/ 4).clamp(50, 75),
+      _DiffTier.medium     => (75 + (lvl - 150) ~/ 4).clamp(75, 125),
+      _DiffTier.hard       => (125 + (lvl - 350) ~/ 4).clamp(125, 185),
+      _DiffTier.extreme    => (185 + (lvl - 600) ~/ 4).clamp(185, 245),
+      _DiffTier.impossible => (245 + (lvl - 850) ~/ 3).clamp(245, 300),
     };
   }
 
-  /// Turn limits: only in extreme/impossible tiers on milestone levels
+  /// Turn limits: null by default (danger line handles loss condition naturally)
   static int? _turnLimit(int lvl, _DiffTier tier) {
-    if (tier == _DiffTier.impossible && lvl % 5  == 0) return 18;
-    if (tier == _DiffTier.extreme    && lvl % 10 == 0) return 22;
     return null;
   }
 

@@ -112,4 +112,11 @@ class GameStorage {
   Future<void> setIsMuted(bool muted) async {
     await _prefs.setBool('is_muted', muted);
   }
+
+  // --- Theme Mode (Dual Black Options) ---
+  // 0: OLED True Black (#000000), 1: Cyber Space Void (#070D1B)
+  int getDarkThemeIndex() => _prefs.getInt('dark_theme_index') ?? 0;
+  Future<void> setDarkThemeIndex(int index) async {
+    await _prefs.setInt('dark_theme_index', index);
+  }
 }

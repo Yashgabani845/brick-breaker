@@ -12,13 +12,14 @@ import '../components/glass_card.dart';
 import '../components/glass_modal.dart';
 import '../components/neon_glow_text.dart';
 import '../components/swarm_3d_sphere.dart';
+import '../modals/sandbox_debug_modal.dart';
 import '../modals/settings_modal.dart';
 import 'daily_challenge_screen.dart';
 import 'gameplay_screen.dart';
 import 'level_map_screen.dart';
 import 'skins_wardrobe_screen.dart';
 
-/// Next-Gen Cyber-Glassmorphic Home Screen
+/// Next-Gen Cyber-Glassmorphic Home Screen for Android & Mobile
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -27,13 +28,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+  late AnimationController _floatController;
   int _coins = 250;
   int _gems = 20;
   int _unlockedLevel = 1;
   int _permanentBalls = 35;
   int _totalStars = 0;
   int _highScore = 0;
+  int _themeIndex = 0;
   DifficultyMode _difficulty = DifficultyMode.standard;
   BallSkin _currentSkin = BallSkin.neonWhite;
   bool _isMuted = false;
@@ -41,9 +43,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _floatController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
     _loadSaveData();
   }
@@ -54,22 +56,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for (int i = 1; i <= 20; i++) {
       stars += GameStorage.instance.getStarsForLevel(i);
     }
-    setState(() {
-      _coins = GameStorage.instance.getCoins();
-      _gems = GameStorage.instance.getGems();
-      _unlockedLevel = GameStorage.instance.getHighestLevelUnlocked();
-      _difficulty = GameStorage.instance.getDifficultyMode();
-      _currentSkin = GameStorage.instance.getSelectedSkin();
-      _permanentBalls = (30 + (_unlockedLevel * 5)).clamp(30, 500);
-      _totalStars = stars;
-      _highScore = GameStorage.instance.getHighScore();
-      _isMuted = AudioSynthesizer.instance.isMuted;
-    });
+    if (mounted) {
+      setState(() {
+        _coins = GameStorage.instance.getCoins();
+        _gems = GameStorage.instance.getGems();
+        _unlockedLevel = GameStorage.instance.getHighestLevelUnlocked();
+        _difficulty = GameStorage.instance.getDifficultyMode();
+        _currentSkin = GameStorage.instance.getSelectedSkin();
+        _permanentBalls = (30 + (_unlockedLevel * 5)).clamp(30, 500);
+        _totalStars = stars;
+        _highScore = GameStorage.instance.getHighScore();
+        _themeIndex = GameStorage.instance.getDarkThemeIndex();
+        _isMuted = AudioSynthesizer.instance.isMuted;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _floatController.dispose();
     super.dispose();
   }
 
@@ -102,44 +107,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ).then((_) => _loadSaveData());
   }
 
+  void _toggleDarkTheme() {
+    AudioSynthesizer.instance.playUiClick();
+    final nextIndex = (_themeIndex == 0) ? 1 : 0;
+    GameStorage.instance.setDarkThemeIndex(nextIndex);
+    setState(() => _themeIndex = nextIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bgColor = GameColors.getBackgroundColor(_themeIndex);
+
     return Scaffold(
-      backgroundColor: GameColors.oledDark,
+      backgroundColor: bgColor,
       body: Stack(
         children: [
-          // 1. Ambient Dynamic Space Nebula Background
+          // 1. Dynamic Ambient Background
           _buildCosmicBackground(),
 
-          // 2. Main Scrollable/Adaptive Viewport
+          // 2. Main Scrollable Interface
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Column(
                 children: [
-                  // Top Resource & Sound Bar
+                  // Top Resource Bar with Theme & Audio Toggles
                   _buildTopBar(),
                   const SizedBox(height: 12),
 
-                  // Game Title & Stats Pill
-                  _buildTitleSection(),
+                  // Hero App Logo & 3D Title Card
+                  _buildHeroLogoCard(),
                   const SizedBox(height: 14),
 
-                  // 3D Interactive Swarm Hero Showcase
-                  _build3dSwarmHero(),
-                  const SizedBox(height: 20),
+                  // 3D Ball Swarm Interactive Sphere Showcase
+                  _build3dSwarmShowcase(),
+                  const SizedBox(height: 16),
 
-                  // Primary Campaign CTA
+                  // Giant Primary Play CTA
                   _buildMainPlayCta(),
                   const SizedBox(height: 16),
 
-                  // Game Modes Grid
-                  _buildModeCards(),
+                  // 4 Game Modes Grid
+                  _buildGameModesGrid(),
                   const SizedBox(height: 16),
 
-                  // Quick Action Dock (Wardrobe, Settings, Info)
-                  _buildQuickActionDock(),
-                  const SizedBox(height: 8),
+                  // Stats Ribbon
+                  _buildStatsRibbon(),
+                  const SizedBox(height: 16),
+
+                  // Quick Action Dock (Wardrobe, Settings, Sandbox)
+                  _buildBottomDock(),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -150,18 +169,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildCosmicBackground() {
+    if (_themeIndex == 0) {
+      // OLED Pitch Black Mode
+      return Container(color: Colors.black);
+    }
+
+    // Cyber Space Dark Mode with subtle ambient pulsing nebula
     return AnimatedBuilder(
-      animation: _pulseController,
+      animation: _floatController,
       builder: (context, child) {
-        final t = _pulseController.value;
+        final t = _floatController.value;
         return Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment(0.0, -0.3 + 0.15 * math.sin(t * math.pi)),
-              radius: 1.5,
+              center: Alignment(0.0, -0.2 + 0.1 * math.sin(t * math.pi)),
+              radius: 1.4,
               colors: [
-                Color.lerp(GameColors.spaceDark, const Color(0xFF1E1B4B), t)!,
-                GameColors.oledDark,
+                Color.lerp(const Color(0xFF0F172A), const Color(0xFF1E1B4B), t)!,
+                GameColors.spaceDark,
               ],
             ),
           ),
@@ -174,12 +199,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Level & Star Chip
+        // Level & Stars Chip
         GlassCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           borderRadius: 14,
           glow: true,
           glowColor: GameColors.solarGold,
+          onTap: () => _openLevelMap(),
           child: Row(
             children: [
               const Icon(Icons.military_tech_rounded, color: GameColors.solarGold, size: 18),
@@ -199,12 +225,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ),
 
-        // Currency Badges & Sound Toggle
+        // Currencies & Toggles
         Row(
           children: [
             // Coins
             GlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               borderRadius: 14,
               child: Row(
                 children: [
@@ -221,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
             // Gems
             GlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               borderRadius: 14,
               child: Row(
                 children: [
@@ -236,23 +262,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(width: 6),
 
-            // Audio Toggle
+            // Dual Black Theme Switcher Button
             GlassCard(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
+              borderRadius: 14,
+              onTap: _toggleDarkTheme,
+              child: Icon(
+                _themeIndex == 0 ? Icons.dark_mode_rounded : Icons.brightness_4_rounded,
+                color: _themeIndex == 0 ? GameColors.neonCyan : GameColors.neonPurple,
+                size: 19,
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // Audio Mute Toggle
+            GlassCard(
+              padding: const EdgeInsets.all(7),
               borderRadius: 14,
               onTap: () {
                 setState(() {
                   AudioSynthesizer.instance.toggleMute();
                   _isMuted = AudioSynthesizer.instance.isMuted;
+                  GameStorage.instance.setIsMuted(_isMuted);
                 });
                 if (!_isMuted) {
-                  AudioSynthesizer.instance.playCollectPlusBall();
+                  AudioSynthesizer.instance.playRewardClaim();
                 }
               },
               child: Icon(
                 _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                 color: _isMuted ? Colors.white38 : GameColors.neonCyan,
-                size: 20,
+                size: 19,
               ),
             ),
           ],
@@ -261,57 +301,132 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildTitleSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            NeonGlowText(
-              'BRICKS BREAKER',
-              fontSize: 28.0,
-              color: Colors.white,
-              glowColor: GameColors.neonCyan,
-              letterSpacing: 2.0,
+  Widget _buildHeroLogoCard() {
+    return AnimatedBuilder(
+      animation: _floatController,
+      builder: (context, child) {
+        final floatOffset = math.sin(_floatController.value * math.pi) * 3.0;
+
+        return Transform.translate(
+          offset: Offset(0, floatOffset),
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            borderRadius: 22,
+            glow: true,
+            glowColor: GameColors.neonCyan,
+            surfaceColor: const Color(0x1A00F0FF),
+            child: Row(
+              children: [
+                // Glowing App Logo Emblem
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: GameColors.neonCyan.withOpacity(0.6), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: GameColors.neonCyan.withOpacity(0.35),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.asset(
+                      'assets/images/app_logo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.black,
+                        child: const Icon(Icons.sports_esports_rounded, color: GameColors.neonCyan, size: 36),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+
+                // Game Title & Badge
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          NeonGlowText(
+                            'BRICKS BREAKER',
+                            fontSize: 18.0,
+                            color: Colors.white,
+                            glowColor: GameColors.neonCyan,
+                            letterSpacing: 1.2,
+                          ),
+                          SizedBox(width: 6),
+                          NeonGlowText(
+                            '3D',
+                            fontSize: 20.0,
+                            color: GameColors.neonMagenta,
+                            glowColor: GameColors.neonMagenta,
+                            letterSpacing: 1.5,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: GameColors.neonLime.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: GameColors.neonLime.withOpacity(0.5)),
+                            ),
+                            child: const Text(
+                              '1000 LEVELS',
+                              style: TextStyle(color: GameColors.neonLime, fontSize: 9, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: GameColors.neonPurple.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: GameColors.neonPurple.withOpacity(0.5)),
+                            ),
+                            child: const Text(
+                              '3D PHYSICS',
+                              style: TextStyle(color: GameColors.neonPurple, fontSize: 9, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            SizedBox(width: 8),
-            NeonGlowText(
-              '3D',
-              fontSize: 32.0,
-              color: GameColors.neonMagenta,
-              glowColor: GameColors.neonMagenta,
-              letterSpacing: 3.0,
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
           ),
-          child: Text(
-            'HIGH SCORE: $_highScore • HARDCORE PHYSICS ENGINE',
-            style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.1),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _build3dSwarmHero() {
+  Widget _build3dSwarmShowcase() {
     return GlassCard(
       glow: true,
       glowColor: _currentSkin.glowColor,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      borderRadius: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      borderRadius: 24,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SkinsWardrobeScreen()),
+        ).then((_) => _loadSaveData());
+      },
       child: Column(
         children: [
-          // 3D Swarm Sphere Canvas
+          // 3D Swarm Canvas
           SizedBox(
-            height: 150,
+            height: 130,
             child: Center(
               child: Swarm3dSphere(
                 ballCount: _permanentBalls,
@@ -324,9 +439,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Swarm Status & Skin Tag
+          // Swarm Count & Skin Name
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -334,18 +449,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 '$_permanentBalls BALL SWARM',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
+                  letterSpacing: 1.1,
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: _currentSkin.glowColor.withOpacity(0.2),
+                  color: _currentSkin.glowColor.withOpacity(0.25),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _currentSkin.glowColor.withOpacity(0.5)),
+                  border: Border.all(color: _currentSkin.glowColor.withOpacity(0.6)),
                 ),
                 child: Text(
                   _currentSkin.displayName.toUpperCase(),
@@ -369,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   : GameColors.neonCyan,
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
+              letterSpacing: 0.8,
             ),
           ),
         ],
@@ -379,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildMainPlayCta() {
     final isMax = _unlockedLevel > 20;
-    final lvlTitle = isMax ? 'PLAY ENDLESS SURVIVAL' : 'PLAY LEVEL $_unlockedLevel';
+    final lvlTitle = isMax ? 'PLAY ENDLESS MATRIX' : 'CONTINUE LEVEL $_unlockedLevel';
 
     return SizedBox(
       width: double.infinity,
@@ -391,13 +506,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             _startLevel(_unlockedLevel);
           }
         },
-        gradient: const [GameColors.neonCyan, Color(0xFF0077FF)],
-        padding: const EdgeInsets.symmetric(vertical: 18.0),
+        gradient: const [GameColors.neonCyan, Color(0xFF0077FF), Color(0xFF8B5CF6)],
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
         borderRadius: 20.0,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
             const SizedBox(width: 8),
             Text(
               lvlTitle,
@@ -414,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildModeCards() {
+  Widget _buildGameModesGrid() {
     return Column(
       children: [
         Row(
@@ -422,16 +537,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             // Sector Campaign Map Card
             Expanded(
               child: GlassCard(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LevelMapScreen(
-                        unlockedLevel: _unlockedLevel,
-                        onSelectLevel: (lvl) => _startLevel(lvl),
-                      ),
-                    ),
-                  ).then((_) => _loadSaveData());
-                },
+                onTap: _openLevelMap,
                 padding: const EdgeInsets.all(14),
                 borderRadius: 18,
                 glow: true,
@@ -447,9 +553,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text('SECTOR MAP', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Text('1000 SECTORS', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text('20 Handcrafted Worlds', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                    Text('Level Map & Bosses', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
                   ],
                 ),
               ),
@@ -482,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 10),
                     const Text('DAILY PUZZLE', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    const Text('Streak Bounties', style: TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text('Streak Bounties 🔥', style: TextStyle(color: GameColors.electricAmber, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -492,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         const SizedBox(height: 12),
         Row(
           children: [
-            // Brutal Impossible Citadel Card
+            // Brutal Hardcore Mode Card
             Expanded(
               child: GlassCard(
                 onTap: () => _startLevel(10, diff: DifficultyMode.brutalImpossible),
@@ -512,9 +618,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text('IMPOSSIBLE', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Text('BRUTAL TRIAL', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    const Text('Brutal Hardcore', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 11, fontWeight: FontWeight.bold)),
+                    const Text('Overclock Apex', style: TextStyle(color: GameColors.crimsonDanger, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -541,7 +647,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text('ENDLESS SURVIVAL', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                    const Text('ENDLESS MATRIX', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
                     Text('Infinite Waves', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
                   ],
@@ -554,9 +660,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildQuickActionDock() {
+  Widget _buildStatsRibbon() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: 18,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem('HIGH SCORE', '$_highScore', GameColors.neonCyan),
+          _buildStatItem('TOTAL STARS', '$_totalStars ⭐', GameColors.solarGold),
+          _buildStatItem('AMMUNITION', '$_permanentBalls ⚪', GameColors.neonLime),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String title, String value, Color color) {
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+
+  Widget _buildBottomDock() {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       borderRadius: 20,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -572,9 +703,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.palette_rounded, color: GameColors.neonPurple, size: 26),
+                Icon(Icons.palette_rounded, color: GameColors.neonPurple, size: 24),
                 SizedBox(height: 4),
                 Text('Skins', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+
+          // Sandbox / Level Debug
+          GestureDetector(
+            onTap: () {
+              AudioSynthesizer.instance.playUiClick();
+              GlassModal.show(
+                context: context,
+                title: 'LEVEL SELECTOR',
+                child: SandboxDebugModal(
+                  onLoadLevel: (lvl) {
+                    Navigator.of(context).pop();
+                    _startLevel(lvl);
+                  },
+                ),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.science_rounded, color: GameColors.neonCyan, size: 24),
+                SizedBox(height: 4),
+                Text('Selector', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -592,12 +748,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     setState(() => _difficulty = newDiff);
                   },
                 ),
-              );
+              ).then((_) => _loadSaveData());
             },
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.settings_rounded, color: Colors.white70, size: 26),
+                Icon(Icons.settings_rounded, color: Colors.white70, size: 24),
                 SizedBox(height: 4),
                 Text('Settings', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
@@ -607,5 +763,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-}
 
+  void _openLevelMap() {
+    AudioSynthesizer.instance.playUiClick();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LevelMapScreen(
+          unlockedLevel: _unlockedLevel,
+          onSelectLevel: (lvl) => _startLevel(lvl),
+        ),
+      ),
+    ).then((_) => _loadSaveData());
+  }
+}

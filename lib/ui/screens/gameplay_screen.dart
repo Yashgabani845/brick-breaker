@@ -181,8 +181,9 @@ class _GameplayScreenState extends State<GameplayScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = GameColors.getBackgroundColor(GameStorage.instance.getDarkThemeIndex());
     return Scaffold(
-      backgroundColor: GameColors.oledDark,
+      backgroundColor: bgColor,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

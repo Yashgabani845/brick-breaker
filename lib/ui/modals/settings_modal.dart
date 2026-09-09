@@ -61,6 +61,114 @@ class _SettingsModalState extends State<SettingsModal> {
         ),
         const Divider(color: Colors.white12, height: 24),
 
+        // Dark Theme Style Options (OLED True Black vs Cyber Space Dark)
+        const Row(
+          children: [
+            Icon(Icons.dark_mode_rounded, color: GameColors.neonPurple),
+            SizedBox(width: 10),
+            Text('Dark Background Style', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            // Option 1: OLED True Black
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => GameStorage.instance.setDarkThemeIndex(0));
+                  AudioSynthesizer.instance.playUiClick();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: GameStorage.instance.getDarkThemeIndex() == 0
+                        ? GameColors.neonCyan.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: GameStorage.instance.getDarkThemeIndex() == 0
+                          ? GameColors.neonCyan
+                          : Colors.white12,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white54, width: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'OLED True Black',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const Text(
+                        'Pure #000000',
+                        style: TextStyle(color: Colors.white38, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Option 2: Cyber Space Dark
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => GameStorage.instance.setDarkThemeIndex(1));
+                  AudioSynthesizer.instance.playUiClick();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: GameStorage.instance.getDarkThemeIndex() == 1
+                        ? GameColors.neonPurple.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: GameStorage.instance.getDarkThemeIndex() == 1
+                          ? GameColors.neonPurple
+                          : Colors.white12,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF080D1A),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: GameColors.neonPurple, width: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Cyber Space Dark',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const Text(
+                        'Cosmic Nebula',
+                        style: TextStyle(color: Colors.white38, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const Divider(color: Colors.white12, height: 24),
+
         // Difficulty Tuning
         const Row(
           children: [

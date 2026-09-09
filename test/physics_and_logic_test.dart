@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bricks_breaker_3d/core/math/vector2.dart';
 import 'package:bricks_breaker_3d/game/models/brick.dart';
@@ -7,6 +8,7 @@ import 'package:bricks_breaker_3d/game/physics/chain_reaction_manager.dart';
 import 'package:bricks_breaker_3d/game/levels/level_catalog.dart';
 import 'package:bricks_breaker_3d/game/levels/procedural_generator.dart';
 import 'package:bricks_breaker_3d/game/levels/shape_library.dart';
+import 'package:bricks_breaker_3d/game/rendering/brick_3d_renderer.dart';
 
 void main() {
 
@@ -136,6 +138,31 @@ void main() {
         expect(level.levelNumber, lvlNum);
         expect(level.initialBricks.isNotEmpty, true);
         expect(level.startingBalls >= 30, true);
+      }
+    });
+
+    test('Brick3DRenderer safely handles huge HP numbers and narrow wedges without overflow', () {
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      final testBricks = [
+        Brick(id: 1, gridX: 0, gridY: 0, type: BrickType.standard, hp: 5),
+        Brick(id: 2, gridX: 0, gridY: 0, type: BrickType.standard, hp: 850),
+        Brick(id: 3, gridX: 0, gridY: 0, type: BrickType.standard, hp: 12500),
+        Brick(id: 4, gridX: 0, gridY: 0, type: BrickType.standard, hp: 2500000),
+        Brick(id: 5, gridX: 0, gridY: 0, type: BrickType.wedgeTopLeft, hp: 9999),
+        Brick(id: 6, gridX: 0, gridY: 0, type: BrickType.turnBallAdder, hp: 1),
+        Brick(id: 7, gridX: 0, gridY: 0, type: BrickType.superNuke, hp: 1),
+      ];
+
+      for (final brick in testBricks) {
+        expect(() {
+          Brick3DRenderer.renderBrick(
+            canvas: canvas,
+            brick: brick,
+            rect: const Rect.fromLTWH(10, 10, 32, 24),
+            depth: 4.0,
+          );
+        }, returnsNormally);
       }
     });
   });

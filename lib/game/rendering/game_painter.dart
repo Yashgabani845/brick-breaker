@@ -40,6 +40,11 @@ class GamePainter extends CustomPainter {
     this.themeColor,
   });
 
+  // Cached background paint (recreated only when theme or size changes)
+  static Paint? _cachedBgPaint;
+  static Color? _cachedThemeColor;
+  static Size? _cachedBgSize;
+
   @override
   void paint(Canvas canvas, Size size) {
     final cellWidth = size.width / columns;
@@ -74,16 +79,22 @@ class GamePainter extends CustomPainter {
 
   void _renderBackground(Canvas canvas, Size size, double cw, double ch) {
     final theme = themeColor ?? GameColors.neonCyan;
-    final bgPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.0, -0.35),
-        radius: 1.3,
-        colors: [
-          Color.lerp(GameColors.spaceDark, theme, 0.15)!,
-          GameColors.oledDark,
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    // Cache background paint — recompute only when size or theme changes
+    if (_cachedBgPaint == null || _cachedThemeColor != theme || _cachedBgSize != size) {
+      _cachedThemeColor = theme;
+      _cachedBgSize = size;
+      _cachedBgPaint = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0.0, -0.35),
+          radius: 1.3,
+          colors: [
+            Color.lerp(GameColors.spaceDark, theme, 0.15)!,
+            GameColors.oledDark,
+          ],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    }
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), _cachedBgPaint!);
 
     // Subtle Sci-Fi Grid Lines within playfield
     final gridPaint = Paint()
@@ -390,5 +401,14 @@ class GamePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant GamePainter oldDelegate) => true;
+  bool shouldRepaint(covariant GamePainter old) {
+    // Only repaint when game state actually changes
+    return old.bricks != bricks ||
+        old.balls != balls ||
+        old.animationProgress != animationProgress ||
+        old.isAiming != isAiming ||
+        old.activeBallCount != activeBallCount ||
+        old.permanentBallCount != permanentBallCount ||
+        old.trajectory != trajectory;
+  }
 }

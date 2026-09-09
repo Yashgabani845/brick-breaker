@@ -20,7 +20,7 @@ class GameConstants {
   static const int maxTrajectoryReflections = 4;
 
   // Collision Substepping
-  static const int physicsSubSteps = 4; // Sub-steps per frame to prevent tunneling
+  static const int physicsSubSteps = 2; // 2 sub-steps per frame — good anti-tunneling with less CPU
   static const double minSeparationOffset = 0.5;
 
   // Special Blocks
@@ -59,11 +59,11 @@ extension DifficultyModeExtension on DifficultyMode {
   double get hpMultiplier {
     switch (this) {
       case DifficultyMode.relaxed:
-        return 0.75;
+        return 0.55;   // Very forgiving
       case DifficultyMode.standard:
-        return 1.0;
+        return 0.65;   // Reduced from 0.75 — enjoyable challenge, always beatable
       case DifficultyMode.hardcore:
-        return 1.35;
+        return 0.95;    // Reduced from 1.0 — old 'standard'
     }
   }
 

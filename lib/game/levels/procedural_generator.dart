@@ -678,15 +678,16 @@ class ProceduralLevelGenerator {
   }
 
   static int _baseHp(int lvl, _DiffTier tier, double wave) {
+    // Gentled HP curve — every level is beatable with the starting ball pool
     final base = switch (tier) {
-      _DiffTier.tutorial   => 4.0   + lvl * 0.6,
-      _DiffTier.easy       => 34.0  + (lvl - 50)  * 0.8,
-      _DiffTier.medium     => 114.0 + (lvl - 150) * 1.2,
-      _DiffTier.hard       => 354.0 + (lvl - 350) * 1.6,
-      _DiffTier.extreme    => 754.0 + (lvl - 600) * 2.0,
-      _DiffTier.impossible => 1254.0 + (lvl - 850) * 2.5,
+      _DiffTier.tutorial   => 3.0   + lvl * 0.35,         // Lvl1=3  Lvl50=20
+      _DiffTier.easy       => 20.0  + (lvl - 50)  * 0.5,  // Lvl150=70
+      _DiffTier.medium     => 70.0  + (lvl - 150) * 0.65, // Lvl350=200
+      _DiffTier.hard       => 200.0 + (lvl - 350) * 0.85, // Lvl600=413
+      _DiffTier.extreme    => 413.0 + (lvl - 600) * 1.0,  // Lvl850=663
+      _DiffTier.impossible => 663.0 + (lvl - 850) * 1.25, // Lvl1000=850
     };
-    return (base * wave).round().clamp(4, 99999);
+    return (base * wave).round().clamp(2, 9999);
   }
 
   static int _startingBalls(int lvl, _DiffTier tier) {

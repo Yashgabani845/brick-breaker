@@ -27,15 +27,15 @@ class GameColors {
   static const Color titaniumSilver = Color(0xFF94A3B8);
   static const Color obsidianBlack = Color(0xFF1E293B);
 
-  // HP Tier Gradients (Enhanced 3D Beveled Blocks)
-  static const List<Color> hpLowGradient = [Color(0xFF00F0FF), Color(0xFF0284C7)];
-  static const List<Color> hpMedLowGradient = [Color(0xFF00FFA3), Color(0xFF059669)];
-  static const List<Color> hpMedGradient = [Color(0xFFFFB703), Color(0xFFEA580C)];
-  static const List<Color> hpHighGradient = [Color(0xFFFF007F), Color(0xFFBE185D)];
-  static const List<Color> hpExtremeGradient = [Color(0xFFA855F7), Color(0xFF6D28D9)];
-  static const List<Color> hpImpossibleGradient = [Color(0xFFFF1744), Color(0xFF991B1B)];
-  static const List<Color> hpCosmicPrismGradient = [Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF06B6D4)];
-  static const List<Color> armoredGradient = [Color(0xFF94A3B8), Color(0xFF475569)];
+  // HP Tier Gradients (Vivid 3D Crystalline Glass Blocks)
+  static const List<Color> hpLowGradient = [Color(0xFF00F5FF), Color(0xFF00B4D8), Color(0xFF0066CC)];
+  static const List<Color> hpMedLowGradient = [Color(0xFF00FF9D), Color(0xFF00C853), Color(0xFF007E33)];
+  static const List<Color> hpMedGradient = [Color(0xFFFFD000), Color(0xFFFF9100), Color(0xFFFF3D00)];
+  static const List<Color> hpHighGradient = [Color(0xFFFF007F), Color(0xFFD81B60), Color(0xFF880E4F)];
+  static const List<Color> hpExtremeGradient = [Color(0xFFC084FC), Color(0xFF9333EA), Color(0xFF581C87)];
+  static const List<Color> hpImpossibleGradient = [Color(0xFFFF385C), Color(0xFFE11D48), Color(0xFF881337)];
+  static const List<Color> hpCosmicPrismGradient = [Color(0xFF38BDF8), Color(0xFFA855F7), Color(0xFFEC4899)];
+  static const List<Color> armoredGradient = [Color(0xFFF1F5F9), Color(0xFF94A3B8), Color(0xFF334155)];
 
   // Laser & Bomb Effects
   static const Color laserHorizontal = Color(0xFF00F0FF);

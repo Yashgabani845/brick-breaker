@@ -41,70 +41,89 @@ class Brick3DRenderer {
 
   static void _render3DRectangle(Canvas canvas, Brick brick, Rect rect, double depth) {
     final baseColor = brick.primaryColor;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4.5));
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(5.0));
 
-    // 1. Bottom/Right 3D Cast Shadow & Extrusion
+    // 1. Bottom/Right 3D Cast Shadow & Depth Extrusion
     final shadowPath = Path()
-      ..moveTo(rect.left + 4, rect.bottom)
-      ..lineTo(rect.left + 4 + depth, rect.bottom + depth)
+      ..moveTo(rect.left + 3, rect.bottom)
+      ..lineTo(rect.left + 3 + depth, rect.bottom + depth)
       ..lineTo(rect.right + depth, rect.bottom + depth)
-      ..lineTo(rect.right + depth, rect.top + 4 + depth)
-      ..lineTo(rect.right, rect.top + 4)
+      ..lineTo(rect.right + depth, rect.top + 3 + depth)
+      ..lineTo(rect.right, rect.top + 3)
       ..lineTo(rect.right, rect.bottom)
       ..close();
 
     _paint.shader = null;
-    _paint.color = Colors.black.withOpacity(0.55);
+    _paint.color = Colors.black.withOpacity(0.60);
     _paint.style = PaintingStyle.fill;
     canvas.drawPath(shadowPath, _paint);
 
-    // 2. Front Face with 3D Directional Lighting & Cyberpunk Gradient
-    final lightColor = Color.lerp(baseColor, Colors.white, 0.35)!;
-    final midColor = baseColor;
-    final darkColor = Color.lerp(baseColor, Colors.black, 0.45)!;
-
+    // 2. Multi-Stop Vivid 3D Crystal / Glass Face
+    final gradientColors = _getBrickGradient(brick);
     _paint.shader = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [lightColor, midColor, darkColor],
-      stops: const [0.0, 0.45, 1.0],
+      colors: gradientColors,
     ).createShader(rect);
-
     canvas.drawRRect(rrect, _paint);
 
-    // 3. Specular Glass Highlight across top edge
-    final highlightPath = Path()
-      ..moveTo(rect.left + 3, rect.top + 1.5)
-      ..lineTo(rect.right - 3, rect.top + 1.5)
-      ..lineTo(rect.right - 5, rect.top + rect.height * 0.38)
-      ..lineTo(rect.left + 5, rect.top + rect.height * 0.38)
-      ..close();
-
-    final highlightPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+    // 3. Inner Radial Crystal Core Glow (Luminosity)
+    final coreGlowPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.0, -0.1),
+        radius: 0.75,
         colors: [
-          Colors.white.withOpacity(0.45),
+          Colors.white.withOpacity(0.28),
           Colors.white.withOpacity(0.0),
         ],
       ).createShader(rect)
       ..style = PaintingStyle.fill;
-    canvas.drawPath(highlightPath, highlightPaint);
+    canvas.drawRRect(rrect, coreGlowPaint);
 
-    // 4. Luminous Bevel Border
-    final borderPaint = Paint()
-      ..color = lightColor.withOpacity(0.65)
+    // 4. Curved Specular Glass Glaze (Top half reflection)
+    final glazePath = Path()
+      ..moveTo(rect.left + 2, rect.top + 2)
+      ..lineTo(rect.right - 2, rect.top + 2)
+      ..lineTo(rect.right - 4, rect.top + rect.height * 0.44)
+      ..quadraticBezierTo(
+        rect.center.dx,
+        rect.top + rect.height * 0.52,
+        rect.left + 4,
+        rect.top + rect.height * 0.44,
+      )
+      ..close();
+
+    final glazePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withOpacity(0.55),
+          Colors.white.withOpacity(0.05),
+        ],
+      ).createShader(rect)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(glazePath, glazePaint);
+
+    // 5. Specular Top-Left Gleam Spot
+    final gleamPaint = Paint()
+      ..color = Colors.white.withOpacity(0.75)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(rect.left + 5.5, rect.top + 4.5), 1.6, gleamPaint);
+
+    // 6. 3D Beveled Outer Chamfer Rim (Highlight top-left, shadow bottom-right)
+    final topRimPaint = Paint()
+      ..color = Colors.white.withOpacity(0.50)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
-    canvas.drawRRect(rrect, borderPaint);
+    canvas.drawRRect(rrect, topRimPaint);
 
-    // 5. Procedural Damage Fracture Lines (when damaged)
+    // 7. Procedural Damage Fracture Lines (when damaged)
     if (brick.crackRatio > 0.15) {
       _renderCracks(canvas, rect, brick.crackRatio);
     }
 
-    // 6. HP Number or Special Entity Glyph
+    // 8. HP Number or Special Entity Glyph
     if (brick.type.isSpecialTrigger || brick.type.isCollectible) {
       _renderSpecialGlyph(canvas, brick, rect);
     } else {
@@ -113,7 +132,6 @@ class Brick3DRenderer {
   }
 
   static void _render3DWedge(Canvas canvas, Brick brick, Rect rect, double depth) {
-    final baseColor = brick.primaryColor;
     final path = Path();
     late Offset v1, v2, v3;
 
@@ -147,7 +165,7 @@ class Brick3DRenderer {
     path.lineTo(v3.dx, v3.dy);
     path.close();
 
-    // 3D Shadow extrusion on wedge
+    // 1. 3D Shadow extrusion on wedge
     final shadowPath = Path()
       ..moveTo(v2.dx, v2.dy)
       ..lineTo(v2.dx + depth, v2.dy + depth)
@@ -156,38 +174,57 @@ class Brick3DRenderer {
       ..close();
 
     _paint.shader = null;
-    _paint.color = Colors.black.withOpacity(0.5);
+    _paint.color = Colors.black.withOpacity(0.55);
     _paint.style = PaintingStyle.fill;
     canvas.drawPath(shadowPath, _paint);
 
-    // Front wedge face gradient
-    final lightColor = Color.lerp(baseColor, Colors.white, 0.35)!;
-    final darkColor = Color.lerp(baseColor, Colors.black, 0.45)!;
-
+    // 2. Front wedge crystal gradient
+    final gradientColors = _getBrickGradient(brick);
     _paint.shader = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [lightColor, baseColor, darkColor],
+      colors: gradientColors,
     ).createShader(rect);
-
     canvas.drawPath(path, _paint);
 
-    // Bevel outline
+    // 3. Wedge Glaze Reflection
+    final wedgeGlazePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withOpacity(0.45),
+          Colors.white.withOpacity(0.0),
+        ],
+      ).createShader(rect)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, wedgeGlazePaint);
+
+    // 4. Bevel outline & Angled Reflector Sheen Line
     final strokePaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
+      ..color = Colors.white.withOpacity(0.55)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
     canvas.drawPath(path, strokePaint);
 
-    // Angled Reflector Sheen Line
-    final iconPaint = Paint()
-      ..color = Colors.white.withOpacity(0.55)
-      ..strokeWidth = 1.5
+    final reflectorPaint = Paint()
+      ..color = Colors.white.withOpacity(0.70)
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(v2.dx, v2.dy), Offset(v3.dx, v3.dy), iconPaint);
+    canvas.drawLine(Offset(v2.dx, v2.dy), Offset(v3.dx, v3.dy), reflectorPaint);
 
-    // Wedge HP label (guaranteed non-overflowing)
+    // Wedge HP label
     _renderHpText(canvas, brick, rect, isWedge: true);
+  }
+
+  static List<Color> _getBrickGradient(Brick brick) {
+    if (brick.type == BrickType.armoredBrick) {
+      return GameColors.armoredGradient;
+    }
+    if (brick.type == BrickType.titaniumShield) {
+      return const [Color(0xFF334155), Color(0xFF1E293B), Color(0xFF0F172A)];
+    }
+    return GameColors.getHpGradient(brick.hp, brick.maxHp);
   }
 
   static void _renderCracks(Canvas canvas, Rect rect, double ratio) {
@@ -220,21 +257,21 @@ class Brick3DRenderer {
       case BrickType.permanentAdder:
         // Glowing Emerald Core + Orbiting Satellites + Bold "+"
         final ringPaint = Paint()
-          ..color = GameColors.emeraldGreen.withOpacity(0.7)
+          ..color = Colors.white.withOpacity(0.9)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8;
+          ..strokeWidth = 2.0;
         canvas.drawCircle(center, rect.height * 0.32, ringPaint);
-        _drawPlusSign(canvas, center, rect.height * 0.22, Colors.white, strokeWidth: 2.4);
+        _drawPlusSign(canvas, center, rect.height * 0.20, Colors.white, strokeWidth: 2.4);
         break;
 
       case BrickType.turnBallAdder:
-        // Neon Lime Hexagon Shell + "+1 TURN" Glyph
+        // Neon Lime Hexagon Shell + "+1" Text Glyph
         const limeColor = Color(0xFF39FF14);
         final hexPaint = Paint()
-          ..color = limeColor.withOpacity(0.35)
+          ..color = limeColor.withOpacity(0.40)
           ..style = PaintingStyle.fill;
         final hexStroke = Paint()
-          ..color = limeColor
+          ..color = Colors.white
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.8;
         final hexPath = Path();
@@ -252,34 +289,49 @@ class Brick3DRenderer {
         hexPath.close();
         canvas.drawPath(hexPath, hexPaint);
         canvas.drawPath(hexPath, hexStroke);
-        _drawPlusSign(canvas, center, rect.height * 0.22, limeColor, strokeWidth: 2.4);
+        _drawPlusSign(canvas, center, rect.height * 0.20, Colors.white, strokeWidth: 2.4);
         break;
 
       case BrickType.inAirSplitter:
         // Swarm x2 Diamond Prism
         final diamondPath = Path()
-          ..moveTo(center.dx, center.dy - rect.height * 0.35)
+          ..moveTo(center.dx, center.dy - rect.height * 0.36)
           ..lineTo(center.dx + rect.width * 0.32, center.dy)
-          ..lineTo(center.dx, center.dy + rect.height * 0.35)
+          ..lineTo(center.dx, center.dy + rect.height * 0.36)
           ..lineTo(center.dx - rect.width * 0.32, center.dy)
           ..close();
         final diamondPaint = Paint()
-          ..color = GameColors.neonCyan.withOpacity(0.5)
+          ..color = GameColors.neonCyan.withOpacity(0.6)
           ..style = PaintingStyle.fill;
         final diamondStroke = Paint()
-          ..color = GameColors.neonCyan
+          ..color = Colors.white
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6;
+          ..strokeWidth = 1.8;
         canvas.drawPath(diamondPath, diamondPaint);
         canvas.drawPath(diamondPath, diamondStroke);
-        _drawPlusSign(canvas, center, rect.height * 0.20, Colors.white, strokeWidth: 2.2);
+
+        // Draw "x2" text inside diamond
+        final span = TextSpan(
+          text: '×2',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: rect.height * 0.44,
+            fontWeight: FontWeight.w900,
+            fontFamily: 'Roboto',
+            shadows: const [
+              Shadow(color: Colors.black, blurRadius: 3),
+            ],
+          ),
+        );
+        final tp = TextPainter(text: span, textDirection: TextDirection.ltr)..layout();
+        tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
         break;
 
       case BrickType.horizontalLaser:
         // Glowing horizontal beam conduit with chevrons
         final laserPaint = Paint()
           ..color = Colors.white
-          ..strokeWidth = 2.4
+          ..strokeWidth = 2.6
           ..style = PaintingStyle.stroke;
         canvas.drawLine(
           Offset(rect.left + 4, center.dy),
@@ -287,30 +339,30 @@ class Brick3DRenderer {
           laserPaint,
         );
         // Arrow heads
-        _drawArrowHead(canvas, Offset(rect.left + 5, center.dy), -math.pi, 4.0, Colors.white);
-        _drawArrowHead(canvas, Offset(rect.right - 5, center.dy), 0, 4.0, Colors.white);
+        _drawArrowHead(canvas, Offset(rect.left + 5, center.dy), -math.pi, 4.5, Colors.white);
+        _drawArrowHead(canvas, Offset(rect.right - 5, center.dy), 0, 4.5, Colors.white);
         break;
 
       case BrickType.verticalLaser:
         // Glowing vertical beam conduit with chevrons
         final laserPaint = Paint()
           ..color = Colors.white
-          ..strokeWidth = 2.4
+          ..strokeWidth = 2.6
           ..style = PaintingStyle.stroke;
         canvas.drawLine(
           Offset(center.dx, rect.top + 4),
           Offset(center.dx, rect.bottom - 4),
           laserPaint,
         );
-        _drawArrowHead(canvas, Offset(center.dx, rect.top + 5), -math.pi / 2, 4.0, Colors.white);
-        _drawArrowHead(canvas, Offset(center.dx, rect.bottom - 5), math.pi / 2, 4.0, Colors.white);
+        _drawArrowHead(canvas, Offset(center.dx, rect.top + 5), -math.pi / 2, 4.5, Colors.white);
+        _drawArrowHead(canvas, Offset(center.dx, rect.bottom - 5), math.pi / 2, 4.5, Colors.white);
         break;
 
       case BrickType.crossLaser:
       case BrickType.diagonalLaser:
         final laserPaint = Paint()
           ..color = Colors.white
-          ..strokeWidth = 2.2
+          ..strokeWidth = 2.4
           ..style = PaintingStyle.stroke;
         canvas.drawLine(Offset(rect.left + 4, center.dy), Offset(rect.right - 4, center.dy), laserPaint);
         canvas.drawLine(Offset(center.dx, rect.top + 4), Offset(center.dx, rect.bottom - 4), laserPaint);
@@ -321,15 +373,13 @@ class Brick3DRenderer {
         // Bomb core with hazard ticks
         canvas.drawCircle(center, rect.height * 0.26, iconPaint);
         final tickPaint = Paint()
-          ..color = (brick.type == BrickType.chainDynamite)
-              ? GameColors.crimsonDanger
-              : GameColors.electricAmber
-          ..strokeWidth = 2.0;
+          ..color = Colors.white
+          ..strokeWidth = 2.2;
         for (int i = 0; i < 4; i++) {
-          final angle = i * math.pi / 2;
+          final angle = i * math.pi / 2 + math.pi / 4;
           canvas.drawLine(
             center + Offset(math.cos(angle) * (rect.height * 0.28), math.sin(angle) * (rect.height * 0.28)),
-            center + Offset(math.cos(angle) * (rect.height * 0.42), math.sin(angle) * (rect.height * 0.42)),
+            center + Offset(math.cos(angle) * (rect.height * 0.44), math.sin(angle) * (rect.height * 0.44)),
             tickPaint,
           );
         }
